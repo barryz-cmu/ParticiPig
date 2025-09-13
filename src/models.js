@@ -1,3 +1,17 @@
+// Get all classes for a user
+export async function getClassesByUserId(userId) {
+  return pool.query('SELECT id, name, location, start_time, end_time FROM classes WHERE user_id = $1', [userId]);
+}
+
+// Replace all classes for a user
+export async function saveClassesForUser(userId, classes) {
+  // Remove old classes
+  await pool.query('DELETE FROM classes WHERE user_id = $1', [userId]);
+  // Insert new classes
+  for (const c of classes) {
+    await pool.query('INSERT INTO classes (user_id, name, location, start_time, end_time) VALUES ($1, $2, $3, $4, $5)', [userId, c.name, c.location, c.start_time, c.end_time]);
+  }
+}
 import pool from './db.js';
 
 export async function createTables() {

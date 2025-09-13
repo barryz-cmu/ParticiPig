@@ -1,7 +1,7 @@
 import React from 'react';
 import styles from './Dashboard.module.css';
 
-export default function Dashboard({ user, pig, leaderboard, streak }) {
+export default function Dashboard({ user, pig, leaderboard, streak, classes, onUpdateSchedule }) {
   return (
     <div className={styles.dashboard}>
       <section className={styles.stats}>
@@ -19,6 +19,18 @@ export default function Dashboard({ user, pig, leaderboard, streak }) {
             </li>
           ))}
         </ol>
+      </section>
+      <section className={styles.schedule}>
+        <h3>Your Class Schedule</h3>
+        <ul>
+          {(!classes || classes.length === 0) && <li>No classes added yet.</li>}
+          {classes && classes.map((c, i) => (
+            <li key={i}>
+              {c.name} @ {c.location} ({c.start_time || 'No start'} - {c.end_time || 'No end'})
+            </li>
+          ))}
+        </ul>
+        <button onClick={onUpdateSchedule} style={{ marginTop: 8 }}>Update Schedule</button>
       </section>
     </div>
   );

@@ -1,3 +1,23 @@
+export async function getClasses(token) {
+  const res = await fetch(`${API_URL}/classes`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error('Failed to fetch classes');
+  return await res.json();
+}
+
+export async function saveClasses(token, classes) {
+  const res = await fetch(`${API_URL}/classes`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ classes })
+  });
+  if (!res.ok) throw new Error('Failed to save classes');
+  return await res.json();
+}
 const API_URL = 'http://localhost:3000/api';
 
 
