@@ -85,10 +85,19 @@ export default function Profile({ user, classes, onSave }) {
   };
 
   return (
-    <div style={{ maxWidth: 400, margin: '0 auto', padding: 24, background: '#fff', borderRadius: 8 }}>
-      <h2>Profile</h2>
-      <div><b>Username:</b> {user.username}</div>
-      <h3>Classes & Locations</h3>
+    <div style={{ minHeight: '100vh', background: '#f9fafb', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', paddingTop: 32 }}>
+      <div style={{ marginBottom: 24, padding: '14px 24px', background: '#fff', borderRadius: 12, border: '1.5px solid #ef5da8', fontSize: '1.12rem', fontWeight: 600, boxShadow: '0 2px 8px #e0b7ff11' }}>
+        <div style={{ marginBottom: 6, color: '#ef5da8', fontWeight: 700, fontSize: '1.18rem', letterSpacing: '0.01em' }}>🐷 Pig Stats</div>
+        <div style={{ display: 'flex', gap: 24, fontWeight: 500, fontSize: '1.08rem' }}>
+          <div>Attack: <b>1</b></div>
+          <div>Defense: <b>0</b></div>
+          <div>HP: <b>5</b></div>
+        </div>
+      </div>
+      <div style={{ maxWidth: 400, width: '100%', margin: '0 auto', padding: 24, background: '#fff', borderRadius: 8, boxShadow: '0 2px 8px #e0b7ff11' }}>
+        <h2>Profile</h2>
+        <div><b>Username:</b> {user.username}</div>
+        <h3>Classes & Locations</h3>
       {editMode ? (
         <>
           <ul>
@@ -158,6 +167,7 @@ export default function Profile({ user, classes, onSave }) {
           <button onClick={() => setEditMode(true)}>Edit Classes</button>
         </>
       )}
+      </div>
     </div>
   );
 }

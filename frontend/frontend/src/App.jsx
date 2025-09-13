@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { EquippedProvider } from './context/EquippedContext.jsx';
 import AuthForm from './components/AuthForm';
 import Dashboard from './components/Dashboard';
 import Shop from './components/Shop';
-import { signup as apiSignup, login as apiLogin, getUser, getClasses, saveClasses } from './api';
+import { signup as apiSignup, login as apiLogin, getUser, getClasses, saveClasses, getGameStats, getEquippedItems } from './api';
 import Profile from './components/Profile';
+import Battle from './components/Battle.jsx';
 
 const initialPig = { food: 0, weight: 0 };
 const initialLeaderboard = [
@@ -22,6 +24,26 @@ function App() {
   const [streak, setStreak] = useState(initialStreak);
   const [classes, setClasses] = useState([]);
   const [showProfilePrompt, setShowProfilePrompt] = useState(false);
+  const [carrots, setCarrots] = useState(0);
+  const addCarrots = (amount) => setCarrots(prev => Math.max(0, prev + amount));
+
+  // Load carrot count from backend on login/user change
+  useEffect(() => {
+    async function loadCarrots() {
+      if (user) {
+        try {
+          const token = localStorage.getItem('token');
+          if (token) {
+            const stats = await getGameStats(token);
+            setCarrots(stats.carrots || 0);
+          }
+        } catch (e) {
+          setCarrots(0);
+        }
+      }
+    }
+    loadCarrots();
+  }, [user]);
 
   // Logout handler
   const handleLogout = () => {
@@ -146,6 +168,37 @@ function App() {
     );
   }
   
+  if (page === 'battle' && user) {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+        <div style={{ width: '100%', display: 'flex', justifyContent: 'center', marginTop: 24, marginBottom: 0 }}>
+          <button
+            onClick={() => setPage('dashboard')}
+            style={{
+              fontSize: '1.1rem',
+              padding: '8px 32px',
+              borderRadius: 18,
+              background: 'linear-gradient(90deg, #ffe0f0 0%, #e0f7fa 100%)',
+              color: '#ef5da8',
+              border: 'none',
+              fontWeight: 700,
+              boxShadow: '0 2px 8px #e0b7ff22',
+              letterSpacing: '0.03em',
+              cursor: 'pointer',
+              marginBottom: 0,
+              marginTop: 0,
+              outline: 'none',
+              transition: 'background 0.2s, box-shadow 0.2s',
+            }}
+          >
+            Back
+          </button>
+        </div>
+        <Battle onWinReward={addCarrots} />
+      </div>
+    );
+  }
+
   if (page === 'shop' && user) {
     return (
       <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
@@ -194,11 +247,20 @@ function App() {
         leaderboard={leaderboard}
         streak={streak}
         classes={classes}
+        carrots={carrots}
+        addCarrots={addCarrots}
         onUpdateSchedule={() => setPage('profile')}
         onNavigateToShop={() => setPage('shop')}
+        onNavigateToBattle={() => setPage('battle')}
       />
     </div>
   );
 }
 
-export default App;
+export default function WrappedApp() {
+  return (
+    <EquippedProvider>
+      <App />
+    </EquippedProvider>
+  );
+}

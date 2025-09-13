@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useEquipped } from '../context/EquippedContext.jsx';
 import styles from './Dashboard.module.css';
 import { recordAttendance, getTotalRewards, getGameStats, updateGameStats, getEquippedItems } from '../api';
 import pigImage from './pig.png';
@@ -264,16 +265,14 @@ function isWithinClassTime(startTime) {
   return currentTime >= (startMinutes - 30) && currentTime <= (startMinutes + 30); // 2 hours window for testing
 }
 
-function Dashboard({ user, classes, onUpdateSchedule, onNavigateToShop }) {
+function Dashboard({ user, classes, onUpdateSchedule, onNavigateToShop, onNavigateToBattle, carrots, addCarrots }) {
   // Game state
   const [level, setLevel] = useState(0);
   const [xp, setXp] = useState(0);
   const [hunger, setHunger] = useState(100);
-  const [carrots, setCarrots] = useState(0);
   
-  // Equipped items state
-  const [equippedPig, setEquippedPig] = useState('pink');
-  const [equippedCosmetic, setEquippedCosmetic] = useState(null);
+  // Equipped items state (from context)
+  const { equippedPig, setEquippedPig, equippedCosmetic, setEquippedCosmetic } = useEquipped();
   
   // UI state
   const [checkMsg, setCheckMsg] = useState('');
@@ -315,10 +314,10 @@ function Dashboard({ user, classes, onUpdateSchedule, onNavigateToShop }) {
             console.log('Loaded equipped items:', equippedItems);
             
             console.log('Setting state - Level:', stats.level, 'XP:', stats.xp, 'Hunger:', stats.hunger, 'Carrots:', stats.carrots);
-            setLevel(stats.level);
-            setXp(stats.xp);
-            setHunger(stats.hunger);
-            setCarrots(stats.carrots);
+            setLevel(Number.isFinite(Number(stats.level)) ? Number(stats.level) : 0);
+            setXp(Number.isFinite(Number(stats.xp)) ? Number(stats.xp) : 0);
+            setHunger(Number.isFinite(Number(stats.hunger)) ? Number(stats.hunger) : 100);
+            // Carrots are now managed in App.jsx
             
             // Set equipped items
             const pigItem = equippedItems.find(item => item.item_type === 'pig');
@@ -333,10 +332,10 @@ function Dashboard({ user, classes, onUpdateSchedule, onNavigateToShop }) {
           // Fallback to localStorage for migration
           const saved = JSON.parse(localStorage.getItem(`piggy-stats-${user.id}`) || '{}');
           console.log('Using localStorage fallback:', saved);
-          setLevel(saved.level || 0);
-          setXp(saved.xp || 0);
-          setHunger(saved.hunger || 100);
-          setCarrots(saved.carrots || 0);
+          setLevel(Number.isFinite(Number(saved.level)) ? Number(saved.level) : 0);
+          setXp(Number.isFinite(Number(saved.xp)) ? Number(saved.xp) : 0);
+          setHunger(Number.isFinite(Number(saved.hunger)) ? Number(saved.hunger) : 100);
+          // Carrots are now managed in App.jsx
         }
       };
       loadGameStats();
@@ -378,8 +377,8 @@ function Dashboard({ user, classes, onUpdateSchedule, onNavigateToShop }) {
       } catch (error) {
         console.error('Failed to save game stats:', error);
         // Fallback to localStorage
-        const stats = { level, xp, hunger, carrots };
-        localStorage.setItem(`piggy-stats-${user.id}`, JSON.stringify(stats));
+  const stats = { level, xp, hunger, carrots };
+  localStorage.setItem(`piggy-stats-${user.id}`, JSON.stringify(stats));
       }
     }
   }, [user, level, xp, hunger, carrots]);
@@ -471,9 +470,6 @@ function Dashboard({ user, classes, onUpdateSchedule, onNavigateToShop }) {
     });
   };
 
-  const addCarrots = (amount) => {
-    setCarrots(prev => Math.max(0, prev + amount));
-  };
 
   const addHunger = (amount) => {
     setHunger(prev => Math.max(0, Math.min(100, prev + amount)));
@@ -657,9 +653,17 @@ function Dashboard({ user, classes, onUpdateSchedule, onNavigateToShop }) {
           </button>
           <button 
             onClick={onNavigateToShop}
-            className={styles.ghost}
+            className={styles.accent}
+            style={{ borderColor: '#ef5da8', color: '#ef5da8' }}
           >
             Go to Shop
+          </button>
+          <button
+            onClick={onNavigateToBattle}
+            className={styles.accent}
+            style={{ marginLeft: 8 }}
+          >
+            Battle!
           </button>
         </div>
 

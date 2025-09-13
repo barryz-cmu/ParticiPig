@@ -2,456 +2,1007 @@
 <html>
 <head>
 <meta charset="utf-8" />
-<title>Piggy — Cosmetic Shop (No Stands + Proper Image Load)</title>
+<title>Pink Pig Battle - Movesets (Piggy Breath)</title>
 <style>
-  :root{ --ink:#111; --muted:#6b7280; --line:#e5e7eb; --accent:#ef5da8; --bg:#fff; }
-  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,Arial}
-  .wrap{max-width:1024px;margin:18px auto;padding:0 14px}
-  .top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
-  .carrots{font-weight:800}
-  .btn{border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 10px;cursor:pointer}
-  .note{font-size:12px;color:var(--muted)}
-  .section{border:1px solid var(--line);border-radius:12px;background:#fff;margin-top:10px}
-  .section h3{margin:0;padding:12px;border-bottom:1px solid var(--line)}
-  .pad{padding:12px}
-  .grid{display:grid;grid-template-columns: repeat(3,1fr);gap:12px}
-  .card{border:1px solid var(--line);border-radius:12px;background:#fff;display:flex;flex-direction:column;overflow:hidden}
-  .card canvas{width:100%;height:200px;display:block;background:#fff}
-  .meta{display:flex;align-items:center;justify-content:space-between;padding:10px 12px}
-  .name{font-weight:800}
-  .price{font-variant-numeric:tabular-nums;color:#374151}
-  .card button{margin:0 12px 12px;border:1px solid #111;background:#fff;border-radius:10px;padding:11px 12px;font-weight:800;cursor:pointer}
-  .card button.own{border-color:var(--line);color:#374151}
-  .card button.equip{border-color:var(--accent);color:#ef5da8}
-  .cta{border-color:var(--accent)!important;color:#ef5da8!important;background:#fff;box-shadow:0 0 0 1px rgba(239,93,168,.05),0 2px 0 rgba(239,93,168,.15) inset}
-  #capsuleRow{display:grid;grid-template-columns: 1.4fr 1fr;gap:14px;align-items:center}
-  .toast{position:fixed;left:50%;top:18px;transform:translateX(-50%);background:#111;color:#fff;padding:10px 14px;border-radius:10px;opacity:0;transition:opacity .2s, transform .2s;pointer-events:none}
-  .toast.show{opacity:1;transform:translateX(-50%) translateY(6px)}
-
-  .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:50;}
-  .modal.show{display:flex}
-  .modal .panel{width:min(920px,96vw);border-radius:16px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.35), 0 0 0 1px rgba(255,255,255,.06) inset;}
-  .modal canvas{display:block;width:100%;height:auto;background:#0b0f14}
-  .modal .skip{position:absolute;right:20px;top:16px;background:#fff;border:0;border-radius:999px;padding:8px 12px;font-weight:800;cursor:pointer}
+  :root { --bg:#fff; --ui:#111; --accent:#ef5da8; --gray:#e5e7eb; }
+  html,body { height:100%; margin:0; background:var(--bg); font-family: Inter, system-ui, Arial; }
+  .wrap {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    justify-content: center;
+  }
+  canvas {
+    display: block;
+    margin: 0 auto 32px;
+    image-rendering: pixelated;
+    background: #fff8fc;
+    border: none;
+    border-radius: 32px;
+    box-shadow: 0 8px 32px #e0b7ff44;
+    z-index: 100;
+    max-width: 100vw;
+  }
+  .hud {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 0;
+    margin-top: 0;
+    pointer-events: none;
+  }
+  .status {
+    min-width: 260px;
+    min-height: 38px;
+    padding: 14px 28px;
+    border-radius: 22px;
+    background: rgba(255,255,255,0.7);
+    box-shadow: 0 4px 24px #e0b7ff33;
+    color: #222;
+    font-size: 1.18rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-align: center;
+    border: none;
+    backdrop-filter: blur(8px);
+    pointer-events: auto;
+  }
+  .moves {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    position: fixed;
+    right: 48px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255,255,255,0.55);
+    border-radius: 32px;
+    box-shadow: 0 4px 24px #e0b7ff22;
+    padding: 32px 18px;
+    z-index: 10;
+    align-items: stretch;
+    max-width: 180px;
+    width: 180px;
+  }
+  .moves button {
+    border-radius: 18px;
+    border: none;
+    padding: 18px 0;
+    font-size: 1.18rem;
+    font-weight: 700;
+    background: linear-gradient(90deg, #ffe0f0 0%, #e0f7fa 100%);
+    color: var(--accent);
+    box-shadow: 0 2px 8px #e0b7ff22;
+    transition: transform 0.12s, box-shadow 0.12s, background 0.18s;
+    margin: 0 0;
+    letter-spacing: 0.04em;
+    outline: none;
+    border: 2.5px solid transparent;
+  }
+  .moves button.pink {
+    background: linear-gradient(90deg, #ffe0f0 0%, #fbefff 100%);
+    color: #ef5da8;
+    border-color: #ef5da8;
+  }
+  .moves button:hover:not(:disabled) {
+    background: linear-gradient(90deg, #e0f7fa 0%, #ffe0f0 100%);
+    transform: scale(1.06) translateX(-4px);
+    box-shadow: 0 4px 16px #ef5da855;
+  }
+  .moves button:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+    filter: grayscale(0.2);
+  }
 </style>
 </head>
 <body>
+<h1 style="text-align:center;font-size:2.5rem;font-family:inherit;margin:32px 0 0 0;color:#ef5da8;letter-spacing:0.04em;">Pig Fight</h1>
 <div class="wrap">
-  <div class="top">
-    <div style="display:flex;align-items:center;gap:10px">
-      <button class="btn" onclick="history.back()">← Back</button>
-      <div class="carrots">Carrots: <span id="carrots">0</span> 🥕</div>
-    </div>
-    <div class="note">Equip choices persist and are used on your home/battle scenes.</div>
+  <canvas id="c" width="960" height="460"></canvas>
+  <div class="hud">
+    <div class="status" id="status">Choose a move…</div>
   </div>
-
-  <div class="section">
-    <h3>🐷 Pig Capsule — 50 🥕</h3>
-    <div class="pad" id="capsuleRow">
-      <canvas id="capsulePrev" width="520" height="240"></canvas>
-      <div>
-        <button id="buyCapsule" class="btn cta">Buy Capsule (50 🥕)</button>
-        <div id="capsuleMsg" class="note" style="margin-top:10px">Contains one of: Black Pig, Angel Pig, Roasted Pig.</div>
-      </div>
-    </div>
+  <div class="moves" style="left:48px;right:auto;">
+    <button id="btn-angel">Angel Dive</button>
+    <button id="btn-welldone">Well Done</button>
+    <button id="btn-heal">Self-Heal</button>
+    <button id="btn-charge">Rampage</button>
   </div>
-
-  <div class="grid">
-    <div class="section">
-      <h3>Pigs</h3>
-      <div class="pad" id="pigsGrid" style="display:grid;grid-template-columns:1fr;gap:10px"></div>
-    </div>
-    <div class="section">
-      <h3>Cosmetics</h3>
-      <div class="pad" id="cosGrid" style="display:grid;grid-template-columns:1fr;gap:10px"></div>
-    </div>
-    <div class="section">
-      <h3>Equipped</h3>
-      <div class="pad">
-        <div id="equippedSummary" class="note">Pig: Pink Pig • Cosmetic: None</div>
-        <canvas id="equippedPrev" width="300" height="200" style="margin-top:8px"></canvas>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div id="toast" class="toast"></div>
-
-<div id="unboxModal" class="modal" aria-hidden="true">
-  <button class="skip" id="skipUnbox">Skip</button>
-  <div class="panel">
-    <canvas id="unboxCanvas" width="900" height="320"></canvas>
+  <div class="moves">
+    <button id="btn-dance" class="pink">Piggy Dance</button>
+    <button id="btn-belly">Belly Row</button>
+  <button id="btn-breath">Fart Attack</button>
+    <button id="btn-slam">Body Slam</button>
   </div>
 </div>
 
 <script>
-/* ================ Save ================ */
-const KEY = "piggy-home-v2";
-const defaultState = {
-  level:0, xp:0, carrots:0, hunger:100, lastTick:Date.now(), schedule:[],
-  pigsOwned:["pink"], cosmeticsOwned:[], equippedPig:"pink", equippedCosmetic:null
-};
-function loadState(){ try{ return {...defaultState, ...(JSON.parse(localStorage.getItem(KEY))||{})}; }catch{ return {...defaultState}; } }
-let S = loadState();
-const RESET_FLAG = KEY + "_carrots_reset_v1";
-if (!localStorage.getItem(RESET_FLAG)) { S.carrots = 0; localStorage.setItem(RESET_FLAG,"1"); saveState(); }
-function saveState(){ localStorage.setItem(KEY, JSON.stringify(S)); }
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d', { alpha:false });
+ctx.imageSmoothingEnabled = false;
 
-/* ================ DOM ================ */
-const carrotsEl = document.getElementById('carrots');
-const toastEl   = document.getElementById('toast');
-const capsuleMsg= document.getElementById('capsuleMsg');
-const capsulePrev = document.getElementById('capsulePrev');
-const pigsGrid  = document.getElementById('pigsGrid');
-const cosGrid   = document.getElementById('cosGrid');
-const equippedPrev = document.getElementById('equippedPrev');
-const equippedSummary = document.getElementById('equippedSummary');
-const unboxModal = document.getElementById('unboxModal');
-const unboxCanvas= document.getElementById('unboxCanvas');
-const skipUnbox  = document.getElementById('skipUnbox');
-function toast(msg){ toastEl.textContent = msg; toastEl.classList.add('show'); setTimeout(()=>toastEl.classList.remove('show'), 1400); }
-function updateCarrots(){ carrotsEl.textContent = S.carrots|0; }
+const statusEl  = document.getElementById('status');
+const btnDance  = document.getElementById('btn-dance');
+const btnBelly  = document.getElementById('btn-belly');
+const btnBreath = document.getElementById('btn-breath');
+const btnSlam   = document.getElementById('btn-slam');
+const btnAngel    = document.getElementById('btn-angel');
+const btnWellDone = document.getElementById('btn-welldone');
+const btnHeal     = document.getElementById('btn-heal');
+const btnCharge   = document.getElementById('btn-charge');
 
-/* ================ Assets ================ */
-const basePig = new Image();
-basePig.src = "pig1.png";
+// ---- Asset ----
+const pig = new Image();
+pig.src = "pig1.png"; // your pig sprite
 
-/* Helper: fire cb immediately if ready, otherwise once on load */
-function onBasePigReady(cb){
-  if (basePig.complete && basePig.naturalWidth > 0) cb();
-  else basePig.addEventListener('load', cb, { once:true });
+// ===================  LAYOUT (LEFT → RIGHT)  ===================
+const SIZE = 150;                 // sprite size
+const PLATE_Y = 330;              // both ovals share the same Y (center)
+const LEFT_PLATE  = { x: 260, y: PLATE_Y };
+const RIGHT_PLATE = { x: 740, y: PLATE_Y };
+
+// Idle pig center (slightly above the plate)
+const HOME = { x: LEFT_PLATE.x,  y: LEFT_PLATE.y - 30 };
+const ENEMY_CENTER = { x: RIGHT_PLATE.x, y: RIGHT_PLATE.y - 30 };
+
+const PLATFORM_W = 340, PLATFORM_H = 36; // oval size
+const R = SIZE * 0.50;                   // ball radius (belly row)
+
+// ---- State machine ----
+let mode = "idle";                  // "idle" | "animating"
+let currentMove = null;             // "dance" | "belly" | "breath" | "slam"
+let moveStart = 0;
+let moveDuration = 0;
+// Flinch state for both pigs
+let playerFlinch = 0;
+let playerFlinchOffset = 0;
+let opponentFlinch = 0;
+let opponentFlinchOffset = 0;
+
+function setStatus(text){ statusEl.textContent = text; }
+function setMovesEnabled(enabled){
+  [btnDance, btnBelly, btnBreath, btnSlam, btnAngel, btnWellDone, btnHeal, btnCharge].forEach(b => b.disabled = !enabled);
+}
+function playMove(name, durationMs){
+  if (mode === "animating") return;
+  mode = "animating"; currentMove = name; moveStart = performance.now();
+  moveDuration = durationMs; setMovesEnabled(false);
+  setStatus({
+    dance : "Pig used Piggy Dance, its next attack deals double damage",
+    belly : "Pig used Belly Row, dealing massive damage!",
+    breath: "Pig used Fart Attack, dealing damage over time!",
+    slam  : "Pig used Body Slam, dealing massive damage by taking some recoil!",
+    angel : "Pig used Angel Dive, dealing insane damage!",
+    welldone : "Pig cooks itself, hurting itself but gaining defense!",
+    heal : "Pig heals some health!",
+    charge : "Pig deals double damage, but takes a lot back!"
+  }[name]);
+  theta = 0; playerBreathParticles.length = 0; impactPuffs.length = 0;
 }
 
-/* ================ Drawing ================ */
-function drawStand(ctx, cx, cy, w=110, h=16, alpha=0.18){
-  ctx.save(); ctx.globalAlpha=alpha; ctx.fillStyle="#000";
-  ctx.beginPath(); ctx.ellipse(cx, cy, w, h, 0, 0, Math.PI*2); ctx.fill();
-  ctx.restore();
-}
-function roundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
-function drawTopHat(ctx, cx, cy, scale=1){
-  const s = 1.0*scale;
-  ctx.save(); ctx.translate(cx, cy-8*s);
-  ctx.fillStyle = "#101114"; roundRect(ctx, -34*s, -5*s, 68*s, 10*s, 6*s); ctx.fill();
-  ctx.fillStyle = "#15161b"; roundRect(ctx, -22*s, -38*s, 44*s, 36*s, 6*s); ctx.fill();
-  ctx.fillStyle = "#ef5da8"; ctx.fillRect(-22*s, -20*s, 44*s, 7*s);
-  ctx.restore();
-}
-function drawTrafficCone(ctx, cx, cy, scale=1){
-  const s = 1.0*scale;
-  ctx.save(); ctx.translate(cx, cy-10);
-  ctx.fillStyle = "#fb923c";
+// ---- Utilities ----
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const easeInOut=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2;
+const easeOut=t=>1-(1-t)*(1-t);
+
+// Plates & helpers
+function drawPlates(){
+  ctx.fillStyle = "#ffffff"; ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // left plate (ally)
+  ctx.save();
+  ctx.fillStyle = "#e5e7eb";
   ctx.beginPath();
-  ctx.moveTo(0, -44*s);
-  ctx.bezierCurveTo(10*s, -34*s, 22*s, -12*s, 26*s, 0);
-  ctx.lineTo(-26*s, 0);
-  ctx.bezierCurveTo(-22*s, -12*s, -10*s, -34*s, 0, -44*s);
-  ctx.closePath(); ctx.fill();
-  ctx.fillStyle = "#fff"; roundRect(ctx, -19*s, -18*s, 38*s, 8*s, 4*s); ctx.fill();
-  ctx.fillStyle = "#ea580c"; roundRect(ctx, -30*s, 0, 60*s, 7*s, 4*s); ctx.fill();
+  ctx.ellipse(LEFT_PLATE.x, LEFT_PLATE.y, PLATFORM_W/2, PLATFORM_H/2, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+
+  // right plate (opponent)
+  ctx.save();
+  ctx.fillStyle = "#f1f5f9";
+  ctx.beginPath();
+  ctx.ellipse(RIGHT_PLATE.x, RIGHT_PLATE.y, PLATFORM_W/2, PLATFORM_H/2, 0, 0, Math.PI*2);
+  ctx.fill();
   ctx.restore();
 }
-function drawAngelWings(ctx, size, locked=false){
-  const stroke = Math.max(2, size * 0.02);
-  ctx.save(); ctx.translate(0, -size*0.05);
-  function wing(side=1){
+
+function drawShadow(cx, w=32, h=10, alpha=0.16){
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = "#000";
+  ctx.beginPath();
+  ctx.ellipse(cx, PLATE_Y + 12, w, h, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawPigAt(x, y, {rot=0, sx=1, sy=1} = {}){
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rot);
+  ctx.scale(sx, sy);
+  ctx.translate(-SIZE/2, -SIZE/2);
+  ctx.drawImage(pig, 0,0,pig.width,pig.height, 0,0,SIZE,SIZE);
+  ctx.restore();
+}
+
+function drawBallPig(cx, cy, {rot=0, sx=1, sy=1} = {}){
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(rot);
+  ctx.scale(sx, sy);
+  ctx.save();
+  ctx.beginPath(); ctx.arc(0, 0, R*0.98, 0, Math.PI*2); ctx.clip();
+  ctx.drawImage(pig, -SIZE/2, -SIZE/2, SIZE, SIZE);
+  ctx.restore();
+  ctx.restore();
+}
+
+// ---------- Idle & Dance ----------
+function drawPigIdle(t){
+  const squish = 1 + Math.sin(t*2)*0.02;
+  let x = HOME.x + playerFlinchOffset;
+  drawPigAt(x, HOME.y, { sy:squish });
+  drawShadow(x, 34, 10, 0.14);
+}
+function drawPigDance(t, progress){
+  const sway = Math.sin(t*4) * 0.22;
+  const bounce = Math.max(0, Math.sin(t*8)) * 8;
+  const scaleY = 1 + Math.sin(t*8) * 0.06;
+  const edge = 0.3;
+  let pulse = 1.0;
+  if (progress < edge) pulse = 0.9 + 0.1*Math.sin((progress/edge)*Math.PI/2);
+  else if (progress > 1-edge) pulse = 0.9 + 0.1*Math.sin(((1-progress)/edge)*Math.PI/2);
+  const cx = HOME.x + playerFlinchOffset, cy = HOME.y - bounce - 4;
+  drawPigAt(cx, cy, { rot: sway, sx:pulse, sy: scaleY*pulse });
+  drawShadow(cx, 34 + Math.sin(t*8)*3, 10 - Math.sin(t*8)*1.2, 0.16);
+}
+
+// ---------------- BELLY ROW ----------------
+let theta = 0;
+function drawBellyRow(now){
+  const elapsed = now - moveStart;
+  const p = clamp(elapsed / moveDuration, 0, 1);
+  const yBall = PLATE_Y - R + 18;
+  const startX = HOME.x;
+  const endX   = RIGHT_PLATE.x - 18;
+  let x = startX + playerFlinchOffset, y = HOME.y, rot = 0, sx = 1, sy = 1;
+  if (p < 0.32) {
+    const t = p/0.32;
+    const sx = lerp(1.00, 0.96, t);
+    const sy = lerp(1.00, 1.06, t);
+    drawShadow(x, 14 + 22*t, 8 - 1.2*t, 0.16);
+    drawBallPig(x, yBall, { sx, sy });
+  } else if (p < 0.68) {
+    const t = easeInOut((p-0.32)/0.36);
+    const cx = lerp(startX, endX, t) + playerFlinchOffset;
+    const arcLen = (endX - startX) * t;
+    theta = arcLen / R;
+    drawShadow(cx, 30, 10, 0.16);
+    drawBallPig(cx, yBall, { rot: theta });
+  } else if (p < 0.84) {
+    const t = (p-0.68)/0.16;
+    const k = 0.22 * (1 - easeOut(t));
+    drawShadow(endX + playerFlinchOffset, 34, 9, 0.18);
+    drawBallPig(endX + playerFlinchOffset, yBall, { sx:1+k, sy:1-k });
+  } else {
+    const t = easeInOut((p-0.84)/0.16);
+    const cx = lerp(endX, startX, t) + playerFlinchOffset;
+    drawShadow(cx, 30, 10, 0.16);
     ctx.save();
-    ctx.scale(side,1);
-    ctx.translate(-size*0.44, -size*0.10);
-    ctx.rotate(-0.12);
-    ctx.fillStyle = locked ? "#e5e7eb" : "#fff";
-    ctx.strokeStyle= locked ? "#d1d5db" : "#c7e0ff";
-    ctx.lineWidth=stroke;
-    ctx.beginPath();
-    ctx.moveTo(0,0);
-    ctx.quadraticCurveTo(-size*0.10, -size*0.08, -size*0.22, -size*0.02);
-    ctx.quadraticCurveTo(-size*0.26,  size*0.10, -size*0.06,  size*0.14);
-    ctx.quadraticCurveTo(-size*0.18,  size*0.06, 0,0);
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = locked ? "rgba(209,213,219,0.45)" : "rgba(199,224,255,0.35)";
-    for(let i=0;i<3;i++){
-      const f=i/3;
+    ctx.globalAlpha = 1 - t; drawBallPig(cx, yBall);
+    ctx.globalAlpha = t;     drawPigAt(cx, lerp(yBall, HOME.y, t));
+    ctx.globalAlpha = 1; ctx.restore();
+  }
+}
+
+// ---------------- FART ATTACK (was breath) ----------------
+const playerBreathParticles = [];
+const opponentBreathParticles = [];
+const impactPuffs     = [];
+
+// Emit fart puffs from the butt (behind the pig)
+function emitBreath(x, y, dir, isOpponent = false) {
+  for (let i = 0; i < 3; i++) {
+    // Offset for butt: behind the pig (left for player, right for opponent)
+    let offsetX = dir > 0 ? -SIZE * 0.32 : SIZE * 0.32;
+    let offsetY = 18; // slightly below center
+    const particle = {
+      x: x + offsetX + Math.random() * 6,
+      y: y + offsetY + Math.random() * 8,
+      vx: dir * (320 + Math.random() * 160),
+      vy: -30 + Math.random() * 60,
+      life: 0,
+      ttl: 1400 + Math.random() * 500,
+      r: 5 + Math.random() * 6
+    };
+    if (isOpponent) opponentBreathParticles.push(particle);
+    else playerBreathParticles.push(particle);
+  }
+}
+
+function drawBreath(dt, isOpponent = false) {
+  const arr = isOpponent ? opponentBreathParticles : playerBreathParticles;
+  for (let i = arr.length - 1; i >= 0; i--) {
+    const p = arr[i];
+    p.life += dt;
+    p.x += p.vx * (dt / 1000);
+    p.y += p.vy * (dt / 1000);
+    p.vy += 5 * (dt / 1000);
+    const a = clamp(1 - p.life / p.ttl, 0, 1);
+    ctx.save();
+    ctx.globalAlpha = 0.65 * a;
+    ctx.fillStyle = "#8aff70"; // green main
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 0.35 * a;
+    ctx.fillStyle = "#5fdc3b"; // green highlight
+    ctx.beginPath(); ctx.arc(p.x + 2, p.y + 1, p.r * 0.7, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+    // reach enemy plate -> impact puff
+    if (!isOpponent && p.x >= RIGHT_PLATE.x - 12 && p.life < p.ttl) {
+      impactPuffs.push({ x: RIGHT_PLATE.x, y: RIGHT_PLATE.y - 20, life: 0, ttl: 320 });
+      p.life = p.ttl;
+    }
+    if (isOpponent && p.x <= LEFT_PLATE.x + 12 && p.life < p.ttl) {
+      impactPuffs.push({ x: LEFT_PLATE.x, y: LEFT_PLATE.y - 20, life: 0, ttl: 320 });
+      p.life = p.ttl;
+    }
+    if (p.life >= p.ttl) arr.splice(i, 1);
+  }
+
+  // impact visuals
+  for (let i=impactPuffs.length-1;i>=0;i--){
+    const q = impactPuffs[i];
+    q.life += dt;
+    const a = clamp(1 - q.life/q.ttl, 0, 1);
+    const r = 12 + 16*(q.life/q.ttl);
+    ctx.save();
+    ctx.globalAlpha = 0.5*a;
+    ctx.fillStyle = "#e6f3ff";
+    ctx.beginPath(); ctx.arc(q.x, q.y, r, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+    if (q.life >= q.ttl) impactPuffs.splice(i,1);
+  }
+}
+function drawPigBreath(now) {
+  // Player turns to face away (left)
+  ctx.save();
+  ctx.scale(-1, 1);
+  const elapsed = now - moveStart;
+  const p = clamp(elapsed / moveDuration, 0, 1);
+  let sy = 1, rot = 0;
+  if (p < 0.22) { const t = p / 0.22; sy = 1 + 0.12 * t; rot = -0.04 * t; }
+  else if (p < 0.88) { sy = 1.12; rot = -0.04; if (Math.random() < 0.9) emitBreath(HOME.x, HOME.y - 8, +1, false); }
+  else { const t = (p - 0.88) / 0.12; sy = 1.12 - 0.12 * t; rot = -0.04 * (1 - t); }
+  let x = -HOME.x - playerFlinchOffset;
+  drawPigAt(x, HOME.y - 8, { rot, sx: 1, sy });
+  drawShadow(x, 34, 10, 0.14);
+  drawBreath(1000 / 60, false);
+  ctx.restore();
+}
+function drawOpponentBreath(now) {
+  // Opponent turns to face away (right)
+  ctx.save();
+  ctx.scale(1, 1);
+  const elapsed = now - moveStart;
+  const p = clamp(elapsed / moveDuration, 0, 1);
+  let sy = 1, rot = 0;
+  if (p < 0.22) { const t = p / 0.22; sy = 1 + 0.12 * t; rot = -0.04 * t; }
+  else if (p < 0.88) { sy = 1.12; rot = -0.04; if (Math.random() < 0.9) emitBreath(ENEMY_CENTER.x, ENEMY_CENTER.y - 8, -1, true); }
+  else { const t = (p - 0.88) / 0.12; sy = 1.12 - 0.12 * t; rot = -0.04 * (1 - t); }
+  let x = ENEMY_CENTER.x - opponentFlinchOffset;
+  drawPigAt(x, ENEMY_CENTER.y - 8, { rot, sx: 1, sy });
+  drawShadow(x, 34, 10, 0.14);
+  drawBreath(1000 / 60, true);
+  ctx.restore();
+}
+
+// Simple motion streaks during the run
+function drawSpeedLines(x, y, dir = +1) {
+  ctx.save();
+  ctx.globalAlpha = 0.25;
+  ctx.fillStyle = "#9ca3af";
+  // three short lines trailing behind the pig
+  for (let i = 0; i < 3; i++) {
+    const ox = -dir * (18 + i * 16);
+    const oy = -10 + i * 8;
+    ctx.fillRect(x + ox, y + oy, 26, 3);
+  }
+  ctx.restore();
+}
+
+// ---------------- BODY SLAM (unchanged) ----------------
+// BODY SLAM: ground run -> impact -> return
+function drawBodySlam(now){
+  const elapsed = now - moveStart;
+  const p = clamp(elapsed / moveDuration, 0, 1);
+
+  const startX  = HOME.x,  startY  = HOME.y;        // left plate
+  // Make impact closer to enemy center for better visual hit
+  const impactX = ENEMY_CENTER.x - 8;
+
+  let x = startX, y = startY, rot = 0, sx = 1, sy = 1;
+
+  // Wind-up: 0..0.18, dash: 0.18..0.68, impact: 0.68..0.88, return: 0.88..1
+  if (p < 0.18) {
+    const t = p / 0.18;
+    rot = lerp(0, -0.18, t);
+    sy  = lerp(1, 1.12, t);
+    drawShadow(x, 36, 11, 0.16);
+    drawPigAt(x, y, { rot, sx, sy });
+  } else if (p < 0.68) {
+    const t = (p - 0.18) / 0.50;
+    x = lerp(startX, impactX, easeInOut(t));
+    const s = Math.sin((now - moveStart) / 1000 * 16);
+    y = startY - 3 * Math.max(0, s);
+    rot = -0.18;
+    sy  = 1 + 0.04 * Math.sin((now - moveStart) / 1000 * 32);
+    drawShadow(x, 34, 10, 0.14);
+    drawSpeedLines(x, startY, +1);
+    drawPigAt(x, y, { rot, sx, sy });
+  } else if (p < 0.88) {
+    const t = (p - 0.68) / 0.20;
+    x = impactX; y = startY;
+    const k = 0.26 * (1 - easeOut(t));
+    sx = 1 + k; sy = 1 - k; rot = 0;
+    drawShadow(x, 38, 9, 0.20);
+    const ringA = 0.5 * (1 - t);
+    const ringR = 10 + 22 * t;
+    ctx.save();
+    ctx.globalAlpha = ringA;
+    ctx.strokeStyle = "#e5e7eb";
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(x + 18, PLATE_Y - 22, ringR, 0, Math.PI*2); ctx.stroke();
+    ctx.restore();
+    drawPigAt(x, y, { rot, sx, sy });
+  } else {
+    const t = easeInOut((p - 0.88) / 0.12);
+    x = lerp(impactX, startX, t);
+    y = startY - 2 * Math.max(0, Math.sin((now - moveStart) / 1000 * 14));
+    rot = 0.08 * (1 - t);
+    drawShadow(x, 34, 10, 0.14);
+    drawSpeedLines(x, startY, -1);
+    drawPigAt(x, y, { rot, sx:1, sy:1 });
+  }
+}
+
+
+// ---- Opponent Animations (mirrored) ----
+function drawOpponentIdle(t){
+  ctx.save();
+  ctx.scale(-1, 1);
+  const squish = 1 + Math.sin(t*2)*0.02;
+  let x = -ENEMY_CENTER.x + opponentFlinchOffset;
+  drawPigAt(x, ENEMY_CENTER.y, { sy:squish });
+  drawShadow(x, 34, 10, 0.14);
+  ctx.restore();
+}
+
+function drawOpponentDance(t, progress){
+  ctx.save();
+  ctx.scale(-1, 1);
+  const sway = Math.sin(t*4) * 0.22;
+  const bounce = Math.max(0, Math.sin(t*8)) * 8;
+  const scaleY = 1 + Math.sin(t*8) * 0.06;
+  const edge = 0.3;
+  let pulse = 1.0;
+  if (progress < edge) pulse = 0.9 + 0.1*Math.sin((progress/edge)*Math.PI/2);
+  else if (progress > 1-edge) pulse = 0.9 + 0.1*Math.sin(((1-progress)/edge)*Math.PI/2);
+  const cx = -ENEMY_CENTER.x + opponentFlinchOffset, cy = ENEMY_CENTER.y - bounce - 4;
+  drawPigAt(cx, cy, { rot: sway, sx:pulse, sy: scaleY*pulse });
+  drawShadow(cx, 34 + Math.sin(t*8)*3, 10 - Math.sin(t*8)*1.2, 0.16);
+  ctx.restore();
+}
+
+function drawOpponentBellyRow(now){
+  ctx.save();
+  ctx.scale(-1, 1);
+  const elapsed = now - moveStart;
+  const p = clamp(elapsed / moveDuration, 0, 1);
+  const yBall = PLATE_Y - R + 18;
+  const startX = ENEMY_CENTER.x;
+  const endX   = LEFT_PLATE.x - 18;
+  let x = startX - opponentFlinchOffset, y = ENEMY_CENTER.y, rot = 0, sx = 1, sy = 1;
+  if (p < 0.32) {
+    const t = p/0.32;
+    const sx = lerp(1.00, 0.96, t);
+    const sy = lerp(1.00, 1.06, t);
+    drawShadow(-x, 14 + 22*t, 8 - 1.2*t, 0.16);
+    drawBallPig(-x, yBall, { sx, sy });
+  } else if (p < 0.68) {
+    const t = easeInOut((p-0.32)/0.36);
+    const cx = lerp(startX, endX, t) - opponentFlinchOffset;
+    const arcLen = (endX - startX) * t;
+    theta = arcLen / R;
+    drawShadow(-cx, 30, 10, 0.16);
+    drawBallPig(-cx, yBall, { rot: theta });
+  } else if (p < 0.84) {
+    const t = (p-0.68)/0.16;
+    const k = 0.22 * (1 - easeOut(t));
+    drawShadow(-endX + opponentFlinchOffset, 34, 9, 0.18);
+    drawBallPig(-endX + opponentFlinchOffset, yBall, { sx:1+k, sy:1-k });
+  } else {
+    const t = easeInOut((p-0.84)/0.16);
+    const cx = lerp(endX, startX, t) - opponentFlinchOffset;
+    drawShadow(-cx, 30, 10, 0.16);
+    ctx.save();
+    ctx.globalAlpha = 1 - t; drawBallPig(-cx, yBall);
+    ctx.globalAlpha = t;     drawPigAt(-cx, lerp(yBall, ENEMY_CENTER.y, t));
+    ctx.globalAlpha = 1; ctx.restore();
+  }
+  ctx.restore();
+}
+
+function drawOpponentBreath(now){
+  ctx.save();
+  ctx.scale(-1, 1);
+  const elapsed = now - moveStart;
+  const p = clamp(elapsed / moveDuration, 0, 1);
+  let sy=1, rot=0;
+  if (p < 0.22){ const t=p/0.22; sy=1+0.12*t; rot=-0.04*t; }
+  else if (p < 0.88){ sy=1.12; rot=-0.04; if (Math.random()<0.9) emitBreath(ENEMY_CENTER.x, ENEMY_CENTER.y-8, -1, true); }
+  else { const t=(p-0.88)/0.12; sy=1.12-0.12*t; rot=-0.04*(1-t); }
+  let x = -ENEMY_CENTER.x + opponentFlinchOffset;
+  drawPigAt(x, ENEMY_CENTER.y - 8, { rot, sx:1, sy });
+  drawShadow(x, 34, 10, 0.14);
+  drawBreath(1000/60, true);
+  ctx.restore();
+}
+
+function drawOpponentSlam(now){
+  ctx.save();
+  ctx.scale(-1, 1);
+  const elapsed = now - moveStart;
+  const p = clamp(elapsed / moveDuration, 0, 1);
+  const startX  = ENEMY_CENTER.x,  startY  = ENEMY_CENTER.y;
+  const impactX = LEFT_PLATE.x - 8;
+  let x = startX - opponentFlinchOffset, y = startY, rot = 0, sx = 1, sy = 1;
+  if (p < 0.18) {
+    const t = p / 0.18;
+    rot = lerp(0, -0.18, t);
+    sy  = lerp(1, 1.12, t);
+    drawShadow(-x, 36, 11, 0.16);
+    drawPigAt(-x, y, { rot, sx, sy });
+  } else if (p < 0.68) {
+    const t = (p - 0.18) / 0.50;
+    x = lerp(startX, impactX, easeInOut(t)) - opponentFlinchOffset;
+    const s = Math.sin((now - moveStart) / 1000 * 16);
+    y = startY - 3 * Math.max(0, s);
+    rot = -0.18;
+    sy  = 1 + 0.04 * Math.sin((now - moveStart) / 1000 * 32);
+    drawShadow(-x, 34, 10, 0.14);
+    drawSpeedLines(-x, startY, -1);
+    drawPigAt(-x, y, { rot, sx, sy });
+  } else if (p < 0.88) {
+    const t = (p - 0.68) / 0.20;
+    x = impactX - opponentFlinchOffset; y = startY;
+    const k = 0.26 * (1 - easeOut(t));
+    sx = 1 + k; sy = 1 - k; rot = 0;
+    drawShadow(-x, 38, 9, 0.20);
+    const ringA = 0.5 * (1 - t);
+    const ringR = 10 + 22 * t;
+    ctx.save();
+    ctx.globalAlpha = ringA;
+    ctx.strokeStyle = "#e5e7eb";
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(-x + 18, PLATE_Y - 22, ringR, 0, Math.PI*2); ctx.stroke();
+    ctx.restore();
+    drawPigAt(-x, y, { rot, sx, sy });
+  } else {
+    const t = easeInOut((p - 0.88) / 0.12);
+    x = lerp(impactX, startX, t) - opponentFlinchOffset;
+    y = startY - 2 * Math.max(0, Math.sin((now - moveStart) / 1000 * 14));
+    rot = 0.08 * (1 - t);
+    drawShadow(-x, 34, 10, 0.14);
+    drawSpeedLines(-x, startY, +1);
+    drawPigAt(-x, y, { rot, sx:1, sy:1 });
+  }
+  ctx.restore();
+}
+
+  // ---------------- OPPONENT ANGEL DIVE ----------------
+  function drawOpponentAngelDive(now) {
+    ctx.save();
+    ctx.scale(-1, 1);
+    const elapsed = now - moveStart;
+    const p = clamp(elapsed / moveDuration, 0, 1);
+    // Leap up in an arc, then down to player
+    const startX = ENEMY_CENTER.x, startY = ENEMY_CENTER.y;
+    const endX = LEFT_PLATE.x - 24, endY = LEFT_PLATE.y - 30;
+    const t = easeInOut(p);
+    const x = -lerp(startX, endX, t) + opponentFlinchOffset;
+    const y = lerp(startY, endY, t) - 100 * Math.sin(Math.PI * t);
+    const rot = lerp(0, 0.7, t);
+    // Angel halo
+    if (p < 0.8) {
+      ctx.save();
+      ctx.globalAlpha = 0.7;
       ctx.beginPath();
-      ctx.ellipse(-size*(0.18 - f*0.10), size*(0.02 + f*0.06),
-                  size*(0.10 - f*0.03), size*(0.05 - f*0.015), -0.2, 0, Math.PI*2);
+      ctx.ellipse(x, y-54, 32, 8, 0, 0, Math.PI*2);
+      ctx.strokeStyle = '#ffe066';
+      ctx.lineWidth = 4;
+      ctx.shadowColor = '#fffbe6';
+      ctx.shadowBlur = 12;
+      ctx.stroke();
+      ctx.restore();
+    }
+    drawPigAt(x, y, { rot, sx:1, sy:1 });
+    drawShadow(x, 34, 10, 0.14);
+    ctx.restore();
+  }
+
+  // ---------------- OPPONENT WELL DONE COLOR CHANGE ----------------
+  function drawOpponentWellDone(now) {
+    ctx.save();
+    ctx.scale(-1, 1);
+    const elapsed = now - moveStart;
+    const p = clamp(elapsed / moveDuration, 0, 1);
+    ctx.save();
+    ctx.filter = `brightness(1.1) sepia(1) hue-rotate(-20deg) saturate(2)`;
+    drawPigAt(-ENEMY_CENTER.x + opponentFlinchOffset, ENEMY_CENTER.y, { sx:1, sy:1 });
+    ctx.restore();
+    drawShadow(-ENEMY_CENTER.x + opponentFlinchOffset, 34, 10, 0.14);
+    // Sizzle effect
+    if (p > 0.2 && p < 0.9) {
+      ctx.save();
+      ctx.globalAlpha = 0.18 + 0.12*Math.sin(now/80);
+      ctx.beginPath();
+      ctx.ellipse(-ENEMY_CENTER.x + opponentFlinchOffset, ENEMY_CENTER.y-60, 38, 14, 0, 0, Math.PI*2);
+      ctx.fillStyle = '#fbbf24';
       ctx.fill();
+      ctx.restore();
     }
     ctx.restore();
   }
-  wing(+1); wing(-1);
-  ctx.restore();
-}
-function drawHalo(ctx, size, locked=false){
-  const y=-size*0.44;
-  ctx.save(); ctx.translate(0,y); ctx.rotate(-0.04);
-  const glow = locked ? "rgba(229,231,235,0.35)" : "rgba(251,191,36,0.35)";
-  const ring = locked ? "#d1d5db" : "#fbbf24";
-  const inner= locked ? "#e5e7eb" : "#fde68a";
-  ctx.globalAlpha=0.25; ctx.fillStyle=glow;
-  ctx.beginPath(); ctx.ellipse(0,0,size*0.30,size*0.11,0,0,Math.PI*2); ctx.fill();
-  ctx.globalAlpha=1;
-  ctx.strokeStyle=ring; ctx.lineWidth=size*0.06;
-  ctx.beginPath(); ctx.ellipse(0,0,size*0.26,size*0.08,0,0,Math.PI*2); ctx.stroke();
-  ctx.strokeStyle=inner; ctx.lineWidth=size*0.035;
-  ctx.beginPath(); ctx.ellipse(0,0,size*0.23,size*0.07,0,0,Math.PI*2); ctx.stroke();
-  ctx.restore();
-}
 
-/* Show/Hide stand via flag */
-function drawPigVariant(ctx, cx, cy, size, variant="pink", cosmetic=null, locked=false, showStand=true){
-  ctx.save(); ctx.translate(cx, cy);
-
-  if (variant==="angel") drawAngelWings(ctx, size, locked);
-
-  let filter = "none";
-  if (variant==="angel")   filter = "brightness(1.10) saturate(1.08)";
-  if (variant==="black")   filter = "brightness(0.38) saturate(0) contrast(1.05)";
-  if (variant==="roasted") filter = "sepia(1) saturate(2.2) hue-rotate(-20deg) brightness(1.12) contrast(1.05)";
-  if (locked) filter += " grayscale(1) brightness(0.9)";
-
-  if (basePig.complete && basePig.naturalWidth){
-    ctx.filter = filter.trim();
-    ctx.drawImage(basePig, -size/2, -size/2, size, size);
-    ctx.filter = "none";
-  } else {
-    // lightweight placeholder (no stand)
-    ctx.fillStyle="#f3f4f6"; roundRect(ctx, -size/2, -size/2, size, size, 12); ctx.fill();
-  }
-
-  if (cosmetic==="top-hat")      drawTopHat(ctx, 0, -size*0.34, size/68);
-  if (cosmetic==="traffic-cone") drawTrafficCone(ctx, size*0.03, -size*0.33, size/68);
-  if (variant==="angel")         drawHalo(ctx, size, locked);
-
-  if (showStand) drawStand(ctx, 0, size*0.40, size*0.46, size*0.12);
-  ctx.restore();
-}
-
-/* ================ Capsule preview ================ */
-const COLORS = ["#facc15","#22c55e","#fb7185","#f97316","#e5e7eb","#a78bfa"];
-function shade(hex, amt){ let c=hex.replace('#',''); if(c.length===3)c=c.split('').map(x=>x+x).join(''); const n=parseInt(c,16);
-  let r=(n>>16)+amt,g=(n>>8&255)+amt,b=(n&255)+amt; r=Math.max(0,Math.min(255,r)); g=Math.max(0,Math.min(255,g)); b=Math.max(0,Math.min(255,b));
-  return '#'+(r<<16|g<<8|b).toString(16).padStart(6,'0');
-}
-function sparkle(g,x,y,r){ g.save(); g.translate(x,y); g.fillStyle="rgba(255,255,255,.85)";
-  g.beginPath(); g.moveTo(0,-r); g.lineTo(r*.4,0); g.lineTo(0,r); g.lineTo(-r*.4,0); g.closePath(); g.fill(); g.restore(); }
-function drawCapsule(g, t, baseColor){
-  g.clearRect(0,0,g.canvas.width,g.canvas.height);
-  g.fillStyle="#fff"; g.fillRect(0,0,g.canvas.width,g.canvas.height);
-  drawStand(g, 210, 170, 70, 12, .22);
-  const grad=g.createLinearGradient(120,150,120,210);
-  grad.addColorStop(0,baseColor); grad.addColorStop(1,shade(baseColor,-18));
-  g.fillStyle=grad; roundRect(g, 150, 150, 140, 56, 18); g.fill();
-  g.fillStyle="rgba(226,242,255,.85)"; g.beginPath(); g.ellipse(220, 120, 80, 70, 0, Math.PI, 0); g.fill();
-  const bob=Math.sin(t*2)*4;
-  drawPigVariant(g, 220, 120 + bob, 70, ["pink","black","angel","roasted"][Math.floor((t/2)%4)], null, false, false);
-  g.fillStyle="rgba(255,255,255,.86)"; g.beginPath(); g.ellipse(250, 90, 30, 10, 0, 0, Math.PI*2); g.fill();
-  sparkle(g, 190, 90+bob*0.2, 3); sparkle(g, 245, 70-bob*0.1, 3.6); sparkle(g, 232, 52+bob*0.1, 2.2);
-}
-let t0 = performance.now(), colorIndex = 0;
-function capLoop(now){
-  const t=(now-t0)/1000; const g=capsulePrev.getContext('2d');
-  drawCapsule(g, t, COLORS[colorIndex]);
-  if (Math.floor(t/2.4)!==Math.floor((t-1/60)/2.4)) colorIndex=(colorIndex+1)%COLORS.length;
-  requestAnimationFrame(capLoop);
-}
-requestAnimationFrame(capLoop);
-
-/* ================ Catalog ================ */
-const PIGS = [
-  { id:"pink",    name:"Pink Pig" },
-  { id:"black",   name:"Black Pig" },
-  { id:"angel",   name:"Angel Pig" },
-  { id:"roasted", name:"Roasted Pig" },
-];
-const COSMETICS = [
-  { id:"top-hat",      name:"Top Hat",      price:15 },
-  { id:"traffic-cone", name:"Traffic Cone", price:25 },
-];
-
-function canAfford(cost){ return (S.carrots|0) >= cost; }
-function spend(cost){ if(!canAfford(cost)){ toast("Not enough carrots!"); return false; } S.carrots -= cost; updateCarrots(); saveState(); return true; }
-function grantPig(id){
-  if (!S.pigsOwned.includes(id)) { S.pigsOwned.push(id); S.equippedPig=id; saveState(); renderAll(); return {dup:false, id}; }
-  return {dup:true, id};
-}
-
-/* ================ Unboxing animation ================ */
-function unboxCapsule(pool){
-  return new Promise(resolve=>{
-    const g = unboxCanvas.getContext('2d');
-    const W = unboxCanvas.width, H = unboxCanvas.height;
-    unboxModal.classList.add('show');
-    let running = true;
-    skipUnbox.onclick = ()=>{ running=false; };
-
-    const result = pool[Math.floor(Math.random()*pool.length)];
-    const reel = [];
-    const choices = ["pink",...pool,"?",...pool,"?","black","roasted","angel","?"];
-    for (let i=0;i<18;i++) reel.push(choices[i%choices.length]);
-    reel.push(result); reel.push("?", "black");
-
-    const ITEM_W = 160;
-    let x = 0, speed = 900;
-    const centerX = W/2;
-    const targetIndex = reel.length-3;
-    const targetX = targetIndex*ITEM_W + ITEM_W/2;
-
-    const parts = [];
-    function burst(){
-      for(let i=0;i<120;i++){
-        parts.push({x:centerX,y:H*0.42,vx:(Math.random()-0.5)*420,vy:(Math.random()-0.9)*520,a:1,r:2+Math.random()*2,g:`hsl(${Math.random()*360},90%,70%)`});
-      }
+  // ---------------- OPPONENT SELF-HEAL ----------------
+  function drawOpponentHeal(now) {
+    ctx.save();
+    ctx.scale(-1, 1);
+    const elapsed = now - moveStart;
+    const p = clamp(elapsed / moveDuration, 0, 1);
+    ctx.save();
+    ctx.shadowColor = '#a7f3d0';
+    ctx.shadowBlur = 32 + 32*Math.sin(now/120);
+    drawPigAt(-ENEMY_CENTER.x + opponentFlinchOffset, ENEMY_CENTER.y, { sx:1, sy:1 });
+    ctx.restore();
+    drawShadow(-ENEMY_CENTER.x + opponentFlinchOffset, 34, 10, 0.14);
+    // Sparkles
+    for (let i=0; i<8; i++) {
+      const angle = (i/8)*Math.PI*2 + now/400;
+      const r = 38 + 12*Math.sin(now/200 + i);
+      const x = -ENEMY_CENTER.x + opponentFlinchOffset + Math.cos(angle)*r;
+      const y = ENEMY_CENTER.y - 18 + Math.sin(angle)*r;
+      ctx.save();
+      ctx.globalAlpha = 0.5 + 0.5*Math.sin(now/100 + i);
+      ctx.beginPath();
+      ctx.arc(x, y, 4 + 2*Math.sin(now/90 + i), 0, Math.PI*2);
+      ctx.fillStyle = '#6ee7b7';
+      ctx.fill();
+      ctx.restore();
     }
+    ctx.restore();
+  }
 
-    let last = performance.now(); let stopped=false; let hold=0;
-    function frame(now){
-      const dt = (now-last)/1000; last=now;
-      g.clearRect(0,0,W,H);
-      const bg = g.createLinearGradient(0,0,W,H);
-      bg.addColorStop(0,"#1f0c3a"); bg.addColorStop(1,"#0b223c");
-      g.fillStyle=bg; g.fillRect(0,0,W,H);
-
-      g.save();
-      g.strokeStyle="rgba(255,255,255,.15)"; g.lineWidth=2;
-      g.fillStyle="rgba(255,255,255,.06)";
-      roundRect(g, 40, 60, W-80, 200, 14); g.fill(); g.stroke();
-      g.beginPath(); g.rect(40,60,W-80,200); g.clip();
-
-      if (!stopped){
-        const targetScroll = targetX - centerX;
-        const dist = targetScroll - x;
-        const k = 4.5, damp=2.2;
-        speed = speed + (dist* k - speed*damp) * dt;
-        x += speed * dt;
-        if (Math.abs(dist) < 4 && Math.abs(speed)<20){ stopped=true; speed=0; burst(); }
-      } else { hold += dt; }
-
-      for (let i=0;i<reel.length;i++){
-        const cx = 40 + i*ITEM_W - x + ITEM_W/2;
-        const cy = 160;
-        if (cx < -ITEM_W || cx > W+ITEM_W) continue;
-
-        g.fillStyle = "rgba(255,255,255,.08)";
-        roundRect(g, cx-ITEM_W/2+8, cy-60, ITEM_W-16, 120, 10); g.fill();
-
-        if (reel[i] === "?"){
-          drawPigVariant(g, cx, cy, 110, "pink", null, false, false);
-        } else {
-          drawPigVariant(g, cx, cy, 110, reel[i], null, false, false);
-        }
-      }
-      g.restore();
-
-      g.save(); g.translate(centerX, 60); g.fillStyle="#fff";
-      g.beginPath(); g.moveTo(0,-14); g.lineTo(10,0); g.lineTo(-10,0); g.closePath(); g.fill(); g.restore();
-
-      for (let i=parts.length-1;i>=0;i--){
-        const p=parts[i]; p.vy += 900*dt; p.x += p.vx*dt; p.y += p.vy*dt; p.a -= 1.5*dt;
-        if (p.a<=0){ parts.splice(i,1); continue; }
-        g.globalAlpha=p.a; g.fillStyle=p.g; g.beginPath(); g.arc(p.x,p.y,p.r,0,Math.PI*2); g.fill(); g.globalAlpha=1;
-      }
-
-      if ((hold>1.1 && !running) || hold>1.6){
-        unboxModal.classList.remove('show');
-        resolve(result);
-        return;
-      }
-      requestAnimationFrame(frame);
+  // ---------------- OPPONENT RAMPAGING CHARGE ----------------
+  function drawOpponentCharge(now) {
+    ctx.save();
+    ctx.scale(-1, 1);
+    const elapsed = now - moveStart;
+    const p = clamp(elapsed / moveDuration, 0, 1);
+    const cycles = 3;
+    const t = p * (cycles + 1);
+    let phase = Math.floor(t);
+    let frac = t - phase;
+    let dir = (phase % 2 === 0) ? 1 : -1;
+    let startX = dir === 1 ? ENEMY_CENTER.x : LEFT_PLATE.x - 24;
+    let endX = dir === 1 ? LEFT_PLATE.x - 24 : ENEMY_CENTER.x;
+    let x = -lerp(startX, endX, easeInOut(frac)) + opponentFlinchOffset;
+    let y = ENEMY_CENTER.y - 10 + 8*Math.sin(now/60 + phase*2);
+    let rot = dir * 0.18 * Math.sin(Math.PI * frac);
+    if (Math.random() < 0.5) {
+      ctx.save();
+      ctx.globalAlpha = 0.18;
+      ctx.beginPath();
+      ctx.ellipse(x, y+SIZE/2+18, 32+16*Math.random(), 8+4*Math.random(), 0, 0, Math.PI*2);
+      ctx.fillStyle = '#fbbf24';
+      ctx.fill();
+      ctx.restore();
     }
-    requestAnimationFrame((t)=>{ last=t; frame(t); });
-  });
+    drawPigAt(x, y, { rot, sx:1.08, sy:0.96 });
+    drawShadow(x, 38, 11, 0.18);
+    ctx.restore();
+  }
+// ---- Opponent logic ----
+function playOpponentMove(move) {
+  mode = "animating";
+  currentMove = "opponent-" + move;
+  moveStart = performance.now();
+  moveDuration = {
+    dance: 1200,
+    belly: 1400,
+    breath: 1600,
+    slam: 1300,
+    angel: 1300,
+    welldone: 1000,
+    heal: 1200,
+    charge: 1500
+  }[move];
+  setStatus({
+    dance : "Opponent used Piggy Dance!",
+    belly : "Opponent used Belly Row!",
+    breath: "Opponent used Fart Attack!",
+    slam  : "Opponent used Body Slam!",
+    angel : "Opponent used Angel Dive!",
+    welldone : "Opponent is Well Done!",
+    heal : "Opponent healed itself!",
+    charge : "Opponent rampaged wildly!"
+  }[move]);
+  theta = 0;
+  // Only clear the correct breath/impact arrays for the opponent
+  opponentBreathParticles.length = 0;
+  impactPuffs.length = 0;
 }
 
-/* Buy capsule */
-document.getElementById('buyCapsule').addEventListener('click', async ()=>{
-  const COST=50, REFUND=35;
-  if(!spend(COST)) return;
-  const pool=["black","angel","roasted"];
-  const roll = await unboxCapsule(pool);
-  const r = grantPig(roll);
-  capsuleMsg.innerHTML = r.dup
-    ? `Duplicate <b>${PIGS.find(p=>p.id===roll).name}</b> → refund <b>${REFUND} 🥕</b>.`
-    : `You got <b>${PIGS.find(p=>p.id===roll).name}</b>! Auto-equipped.`;
-  if (r.dup){ S.carrots += REFUND; updateCarrots(); saveState(); }
-  renderAll();
-});
+// ---------------- ANGEL DIVE ----------------
+function drawAngelDive(now) {
+  const elapsed = now - moveStart;
+  const p = clamp(elapsed / moveDuration, 0, 1);
+  // Leap up in an arc, then down to enemy
+  const startX = HOME.x, startY = HOME.y;
+  const endX = RIGHT_PLATE.x - 24, endY = RIGHT_PLATE.y - 30;
+  const t = easeInOut(p);
+  const x = lerp(startX, endX, t) + playerFlinchOffset;
+  const y = lerp(startY, endY, t) - 100 * Math.sin(Math.PI * t);
+  const rot = lerp(0, 0.7, t);
+  // Angel halo
+  if (p < 0.8) {
+    ctx.save();
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath();
+    ctx.ellipse(x, y-54, 32, 8, 0, 0, Math.PI*2);
+    ctx.strokeStyle = '#ffe066';
+    ctx.lineWidth = 4;
+    ctx.shadowColor = '#fffbe6';
+    ctx.shadowBlur = 12;
+    ctx.stroke();
+    ctx.restore();
+  }
+  drawPigAt(x, y, { rot, sx:1, sy:1 });
+  drawShadow(x, 34, 10, 0.14);
+}
 
-/* ================ Cards ================ */
-function clearCanvas(c){ const g=c.getContext('2d'); g.clearRect(0,0,c.width,c.height); g.fillStyle="#fff"; g.fillRect(0,0,c.width,c.height); }
+// ---------------- WELL DONE COLOR CHANGE ----------------
+function drawWellDone(now) {
+  const elapsed = now - moveStart;
+  const p = clamp(elapsed / moveDuration, 0, 1);
+  ctx.save();
+  ctx.filter = `brightness(1.1) sepia(1) hue-rotate(-20deg) saturate(2)`;
+  drawPigAt(HOME.x + playerFlinchOffset, HOME.y, { sx:1, sy:1 });
+  ctx.restore();
+  drawShadow(HOME.x + playerFlinchOffset, 34, 10, 0.14);
+  // Sizzle effect
+  if (p > 0.2 && p < 0.9) {
+    ctx.save();
+    ctx.globalAlpha = 0.18 + 0.12*Math.sin(now/80);
+    ctx.beginPath();
+    ctx.ellipse(HOME.x + playerFlinchOffset, HOME.y-60, 38, 14, 0, 0, Math.PI*2);
+    ctx.fillStyle = '#fbbf24';
+    ctx.fill();
+    ctx.restore();
+  }
+}
 
-function pigCard(p){
-  const wrap=document.createElement('div'); wrap.className='card';
-  const c=document.createElement('canvas'); c.width=320; c.height=200; wrap.appendChild(c);
-  const meta=document.createElement('div'); meta.className='meta'; meta.innerHTML=`<div class="name">${p.name}</div><div class="price">—</div>`; wrap.appendChild(meta);
-  const btn=document.createElement('button'); wrap.appendChild(btn);
+// ---------------- SELF-HEAL ----------------
+function drawHeal(now) {
+  const elapsed = now - moveStart;
+  const p = clamp(elapsed / moveDuration, 0, 1);
+  ctx.save();
+  ctx.shadowColor = '#a7f3d0';
+  ctx.shadowBlur = 32 + 32*Math.sin(now/120);
+  drawPigAt(HOME.x + playerFlinchOffset, HOME.y, { sx:1, sy:1 });
+  ctx.restore();
+  drawShadow(HOME.x + playerFlinchOffset, 34, 10, 0.14);
+  // Sparkles
+  for (let i=0; i<8; i++) {
+    const angle = (i/8)*Math.PI*2 + now/400;
+    const r = 38 + 12*Math.sin(now/200 + i);
+    const x = HOME.x + playerFlinchOffset + Math.cos(angle)*r;
+    const y = HOME.y - 18 + Math.sin(angle)*r;
+    ctx.save();
+    ctx.globalAlpha = 0.5 + 0.5*Math.sin(now/100 + i);
+    ctx.beginPath();
+    ctx.arc(x, y, 4 + 2*Math.sin(now/90 + i), 0, Math.PI*2);
+    ctx.fillStyle = '#6ee7b7';
+    ctx.fill();
+    ctx.restore();
+  }
+}
 
-  const owned=S.pigsOwned.includes(p.id);
-  if (owned){
-    const eq=(S.equippedPig===p.id);
-    btn.textContent = eq ? "Equipped" : "Equip";
-    btn.className = eq ? "own" : "equip";
-    btn.onclick = ()=>{ S.equippedPig=p.id; saveState(); renderAll(); toast("Equipped "+p.name); };
+// ---------------- RAMPAGING CHARGE ----------------
+function drawCharge(now) {
+  const elapsed = now - moveStart;
+  const p = clamp(elapsed / moveDuration, 0, 1);
+  const cycles = 3;
+  const t = p * (cycles + 1);
+  let phase = Math.floor(t);
+  let frac = t - phase;
+  let dir = (phase % 2 === 0) ? 1 : -1;
+  let startX = dir === 1 ? HOME.x : RIGHT_PLATE.x - 24;
+  let endX = dir === 1 ? RIGHT_PLATE.x - 24 : HOME.x;
+  let x = lerp(startX, endX, easeInOut(frac)) + playerFlinchOffset;
+  let y = HOME.y - 10 + 8*Math.sin(now/60 + phase*2);
+  let rot = dir * 0.18 * Math.sin(Math.PI * frac);
+  if (Math.random() < 0.5) {
+    ctx.save();
+    ctx.globalAlpha = 0.18;
+    ctx.beginPath();
+    ctx.ellipse(x, y+SIZE/2+18, 32+16*Math.random(), 8+4*Math.random(), 0, 0, Math.PI*2);
+    ctx.fillStyle = '#fbbf24';
+    ctx.fill();
+    ctx.restore();
+  }
+  drawPigAt(x, y, { rot, sx:1.08, sy:0.96 });
+  drawShadow(x, 38, 11, 0.18);
+}
+
+// ---- Main loop ----
+let t0 = performance.now();
+function loop(now){
+  // Update flinch states
+  // Oscillating flinch for more dramatic effect
+  if (playerFlinch > 0) {
+    playerFlinch--;
+    // Oscillate left/right with decaying amplitude
+    const flinchT = playerFlinch / 16;
+    playerFlinchOffset = Math.sin(flinchT * Math.PI * 6) * (36 * flinchT);  
   } else {
-    btn.textContent = "Locked (Capsule)";
-    btn.className = "own"; btn.disabled=true;
+    playerFlinchOffset = 0;
+  }
+  if (opponentFlinch > 0) {
+    opponentFlinch--;
+    const flinchT = opponentFlinch / 16;
+    opponentFlinchOffset = Math.sin(flinchT * Math.PI * 6) * (36 * flinchT);
+  } else {
+    opponentFlinchOffset = 0;
   }
 
-  const g=c.getContext('2d');
-  const paint = ()=>{ clearCanvas(c); drawPigVariant(g, 160, 110, 150, p.id, (S.equippedPig===p.id)?S.equippedCosmetic:null, !owned, false); };
-  paint();
-  onBasePigReady(paint);   // ← ensure this card repaints when the image loads
+  const t = (now - t0)/1000;
+  drawPlates();
 
-  return wrap;
+  // Always draw both breath clouds so they persist and animate
+  drawBreath(1000/60, false); // player
+  drawBreath(1000/60, true);  // opponent
+
+  if (mode === "animating") {
+    const elapsed = now - moveStart;
+    const progress = Math.min(1, elapsed / moveDuration);
+    // Player move
+    if (currentMove === "dance") {
+      drawPigDance(t, progress);
+      drawOpponentIdle(t);
+      if (elapsed >= moveDuration) endMove("Pig finished dancing!");
+    } else if (currentMove === "belly") {
+      drawBellyRow(now);
+      drawOpponentIdle(t);
+      if (elapsed >= moveDuration) endMove("It rolled back!");
+    } else if (currentMove === "breath") {
+      drawPigBreath(now);
+      drawOpponentIdle(t);
+      if (elapsed >= moveDuration) endMove("A stinky fart hits the foe!");
+    } else if (currentMove === "slam") {
+      drawBodySlam(now);
+      drawOpponentIdle(t);
+      if (elapsed >= moveDuration) endMove("Slam complete!");
+    } else if (currentMove === "angel") {
+      drawAngelDive(now);
+      drawOpponentIdle(t);
+      if (elapsed >= moveDuration) endMove("Pig performed an angel dive!");
+    } else if (currentMove === "welldone") {
+      drawWellDone(now);
+      drawOpponentIdle(t);
+      if (elapsed >= moveDuration) endMove("Pig is well done!");
+    } else if (currentMove === "heal") {
+      drawHeal(now);
+      drawOpponentIdle(t);
+      if (elapsed >= moveDuration) endMove("Pig healed itself!");
+    } else if (currentMove === "charge") {
+      drawCharge(now);
+      drawOpponentIdle(t);
+      if (elapsed >= moveDuration) endMove("Pig rampaged wildly!");
+    // Opponent move (mirrored)
+    } else if (currentMove === "opponent-dance") {
+      drawPigIdle(t);
+      drawOpponentDance(t, progress);
+      if (elapsed >= moveDuration) endMove("Opponent finished dancing!");
+    } else if (currentMove === "opponent-belly") {
+      drawPigIdle(t);
+      drawOpponentBellyRow(now);
+      if (elapsed >= moveDuration) endMove("Opponent rolled back!");
+    } else if (currentMove === "opponent-breath") {
+      drawPigIdle(t);
+      drawOpponentBreath(now);
+      if (elapsed >= moveDuration) endMove("A stinky fart hits you!");
+    } else if (currentMove === "opponent-slam") {
+      drawPigIdle(t);
+      drawOpponentSlam(now);
+      if (elapsed >= moveDuration) endMove("Opponent slammed!");
+    } else if (currentMove === "opponent-angel") {
+      drawPigIdle(t);
+      drawOpponentAngelDive(now);
+      if (elapsed >= moveDuration) endMove("Opponent performed an angel dive!");
+    } else if (currentMove === "opponent-welldone") {
+      drawPigIdle(t);
+      drawOpponentWellDone(now);
+      if (elapsed >= moveDuration) endMove("Opponent is well done!");
+    } else if (currentMove === "opponent-heal") {
+      drawPigIdle(t);
+      drawOpponentHeal(now);
+      if (elapsed >= moveDuration) endMove("Opponent healed itself!");
+    } else if (currentMove === "opponent-charge") {
+      drawPigIdle(t);
+      drawOpponentCharge(now);
+      if (elapsed >= moveDuration) endMove("Opponent rampaged wildly!");
+    }
+  } else {
+    drawPigIdle(t);
+    drawOpponentIdle(t);
+  }
+  requestAnimationFrame(loop);
 }
 
-function cosmeticCard(cos){
-  const wrap=document.createElement('div'); wrap.className='card';
-  const c=document.createElement('canvas'); c.width=320; c.height=200; wrap.appendChild(c);
-  const meta=document.createElement('div'); meta.className='meta'; meta.innerHTML=`<div class="name">${cos.name}</div><div class="price">${cos.price} 🥕</div>`; wrap.appendChild(meta);
-  const btn=document.createElement('button'); wrap.appendChild(btn);
-
-  const owned=S.cosmeticsOwned.includes(cos.id);
-  if(owned){
-    const eq=(S.equippedCosmetic===cos.id);
-    btn.textContent = eq ? "Equipped" : "Equip";
-    btn.className = eq ? "own" : "equip";
-    btn.onclick = ()=>{ S.equippedCosmetic=cos.id; saveState(); renderAll(); toast("Equipped "+cos.name); };
-  }else{
-    btn.textContent = `Buy (${cos.price} 🥕)`; btn.className="cta";
-    btn.onclick = ()=>{ if(!spend(cos.price)) return; S.cosmeticsOwned.push(cos.id); S.equippedCosmetic=cos.id; saveState(); renderAll(); toast("Purchased "+cos.name); };
+function endMove(msg) {
+  // Flinch for all attacks except heal and well done (and dance)
+  const playerFlinchMoves = [
+    "opponent-breath", "opponent-belly", "opponent-slam", "opponent-angel", "opponent-charge"
+  ];
+  const opponentFlinchMoves = [
+    "breath", "belly", "slam", "angel", "charge"
+  ];
+  if (playerFlinchMoves.includes(currentMove)) {
+    playerFlinch = 16;
+  } else if (opponentFlinchMoves.includes(currentMove)) {
+    opponentFlinch = 16;
   }
 
-  const g=c.getContext('2d');
-  function paint(){
-    clearCanvas(c);
-    const cx=160, standY=142;
-    drawStand(g, cx, standY, 90, 14, 0.20);
-    if (cos.id==="top-hat")      drawTopHat(g, cx, standY, 1.0);
-    if (cos.id==="traffic-cone") drawTrafficCone(g, cx, standY, 1.0);
+  if (currentMove && currentMove.startsWith("opponent-")) {
+    // End of opponent's move, return to player
+    mode = "idle";
+    currentMove = null;
+    setMovesEnabled(true);
+    setStatus("Your turn! Choose a move…");
+  } else {
+    // End of player's move, trigger opponent
+    mode = "idle";
+    currentMove = null;
+    setMovesEnabled(false);
+    setStatus("Opponent is thinking…");
+    setTimeout(() => {
+      const moves = ["dance", "belly", "breath", "slam", "angel", "welldone", "heal", "charge"];
+      const move = moves[Math.floor(Math.random() * moves.length)];
+      playOpponentMove(move);
+    }, 700);
   }
-  paint();
-  return wrap;
 }
 
-/* Equipped preview — repaint when basePig is ready */
-function renderEquipped(){
-  const g=equippedPrev.getContext('2d'); clearCanvas(equippedPrev);
-  const paint = ()=>{ clearCanvas(equippedPrev); drawPigVariant(g, 150, 110, 150, S.equippedPig, S.equippedCosmetic, false, false); };
-  paint();
-  onBasePigReady(paint);
-  const pigName = ({"pink":"Pink Pig","black":"Black Pig","angel":"Angel Pig","roasted":"Roasted Pig"})[S.equippedPig] || "Pig";
-  const cosName = S.equippedCosmetic ? (S.equippedCosmetic==="top-hat" ? "Top Hat" : "Traffic Cone") : "None";
-  equippedSummary.textContent = `Pig: ${pigName} • Cosmetic: ${cosName}`;
-}
+// ---- Buttons ----
+btnDance .addEventListener('click', () => playMove("dance", 1200));
+btnBelly .addEventListener('click', () => playMove("belly", 1400));
+btnBreath.addEventListener('click', () => playMove("breath", 1600));
+btnSlam  .addEventListener('click', () => playMove("slam",  1300));
+btnAngel   .addEventListener('click', () => playMove("angel", 1300));
+btnWellDone.addEventListener('click', () => playMove("welldone", 1000));
+btnHeal    .addEventListener('click', () => playMove("heal", 1200));
+btnCharge  .addEventListener('click', () => playMove("charge", 1500));
 
-/* Render */
-function renderPigs(){ pigsGrid.innerHTML=""; PIGS.forEach(p=>pigsGrid.appendChild(pigCard(p))); }
-function renderCosmetics(){ cosGrid.innerHTML=""; COSMETICS.forEach(c=>cosGrid.appendChild(cosmeticCard(c))); }
-function renderAll(){ updateCarrots(); renderPigs(); renderCosmetics(); renderEquipped(); }
-
-/* Init */
-updateCarrots(); renderAll();
-window.addEventListener('storage', (e)=>{ if (e.key===KEY){ S=loadState(); renderAll(); }});
+// Start when image is ready
+pig.onload = () => requestAnimationFrame(loop);
 </script>
 </body>
 </html>
