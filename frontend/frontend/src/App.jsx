@@ -171,7 +171,7 @@ function App() {
   }
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
-      <button onClick={handleLogout} style={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }}>Logout</button>
+      <button onClick={handleLogout} style={{ position: 'absolute', top: 28, right: 8, zIndex: 10, fontSize: '12px', padding: '4px 8px' }}>Logout</button>
       <Dashboard
         key={user?.id || 'no-user'} // Force re-render when user changes
         user={user}

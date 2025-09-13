@@ -1,28 +1,229 @@
-.dashboard {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  align-items: center;
-  justify-content: center;
-  width: 100vw;
-  min-height: 60vh;
+:root { 
+  --ink:#111; 
+  --muted:#374151; /* Darker gray for better contrast */
+  --line:#e5e7eb; 
+  --accent:#ef5da8; 
 }
-.stats {
-  background: #f9f9f9;
-  padding: 1.5rem;
-  border-radius: 10px;
-  box-shadow: 0 1px 8px rgba(0,0,0,0.06);
-}
-.leaderboard {
+
+.phone {
+  width: 420px;
+  margin: 16px auto;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
   background: #fff;
-  padding: 1.5rem;
+  font-family: Inter, system-ui, Arial, sans-serif;
+  color: var(--ink);
+}
+
+.pad {
+  padding: 14px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: 60px 1fr; 
+  row-gap: 8px;
+  column-gap: 10px;
+  align-items: center;
+}
+
+.label {
+  font-weight: 800;
+}
+
+.value {
+  font-variant-numeric: tabular-nums;
+}
+
+.levelBarContainer {
+  margin-left: -30px; /* Move just the level bar a few pixels left */
+  margin-right: 60px; /* Pull the right edge away from logout button */
+}
+
+.bar {
+  position: relative;
+  height: 12px;
+  background: #f3f4f6;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.fill {
+  position: absolute;
+  inset: 0;
+  width: 0;
+  background: linear-gradient(90deg, #60a5fa, #34d399);
+  transition: width 0.25s;
+  height: 100%;
+}
+
+.hunger .fill {
+  background: linear-gradient(90deg, #34d399, #f59e0b, #ef4444);
+}
+
+/* Hunger Slider Styles */
+.hungerSlider {
+  position: relative;
+  height: 12px;
+  z-index: 2; /* Bring slider to front */
+}
+
+.sliderTrack {
+  position: relative;
+  width: 100%;
+  height: 12px;
+  background: linear-gradient(90deg, #ef4444, #f59e0b, #34d399);
+  border-radius: 6px;
+  overflow: visible; /* Allow thumb to be visible outside track */
+  border: 1px solid #374151; /* Add border for better definition */
+}
+
+.sliderFill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.4);
+  transition: width 0.3s ease;
+  border-radius: 6px;
+}
+
+.sliderThumb {
+  position: absolute;
+  top: -4px; /* Move up more to clear the track border */
+  width: 20px; /* Make it bigger for better visibility */
+  height: 20px;
+  background: #fff;
+  border: 3px solid #111; /* Darker, thicker border for better contrast */
+  border-radius: 50%;
+  transform: translateX(-50%);
+  transition: left 0.3s ease;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+  z-index: 10; /* Ensure thumb is above everything */
+  cursor: pointer;
+}
+
+.line {
+  height: 1px;
+  background: var(--line);
+  margin: 8px 0;
+}
+
+.canvas {
+  display: block;
+  width: 100%;
+  height: 360px;
+  image-rendering: pixelated;
+  background: #fff;
+}
+
+.controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.controls button {
+  flex: 1;
+  padding: 10px 12px;
   border-radius: 10px;
-  box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+  border: 1px solid #111;
+  background: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
 }
-.leaderboard ol {
-  padding-left: 1.5rem;
+
+.ghost {
+  border-color: var(--line) !important;
+  color: #111 !important; /* Force black text for all ghost elements */
 }
-.me {
-  color: #ff69b4;
-  font-weight: bold;
+
+.accent {
+  border-color: var(--accent) !important;
+  color: #111 !important; /* Force black text even for accent elements */
+}
+
+/* Specific styling for check-in buttons to ensure good contrast */
+.controls button.ghost {
+  color: #111 !important; /* Much darker for better readability */
+  font-weight: 700 !important;
+}
+
+.controls button.accent {
+  color: #111 !important; /* Force black text even for accent buttons */
+  font-weight: 700 !important;
+}
+
+/* Even more specific targeting for any button with these classes */
+button.ghost,
+button.accent {
+  color: #111 !important;
+}
+
+/* Target buttons in the schedule section specifically */
+.section button {
+  color: #111 !important;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tiny {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.bubble {
+  position: absolute; 
+  padding: 6px 8px; 
+  background: #fff; 
+  border: 1px solid var(--line); 
+  border-radius: 10px; 
+  font-weight: 700; 
+  pointer-events: none; 
+  opacity: 0; 
+  transform: translate(-50%, -100%) translateY(-10px); 
+  transition: opacity 0.15s, transform 0.15s;
+  z-index: 10;
+}
+
+.section {
+  border-top: 1px solid var(--line);
+  padding: 12px 14px;
+}
+
+.schedRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+input, select {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font: inherit;
+}
+
+.pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 12px;
+  color: #1f2937; /* Darker color for better readability */
+  margin-right: 6px;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 480px) {
+  .phone {
+    width: calc(100vw - 32px);
+    margin: 8px 16px;
+  }
 }

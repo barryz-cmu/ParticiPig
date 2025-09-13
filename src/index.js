@@ -1,4 +1,4 @@
-import { saveClassesForUser, getClassesByUserId, recordAttendance, hasRecentAttendance, getTotalRewards } from './models.js';
+import { saveClassesForUser, getClassesByUserId, recordAttendance, hasRecentAttendance, getTotalRewards, getGameStats, updateGameStats } from './models.js';
 import express from 'express';
 import dotenv from 'dotenv';
 import { createTables } from './models.js';
@@ -59,6 +59,36 @@ app.get('/api/rewards', authenticateToken, async (req, res) => {
   }
 });
 
+// Get game stats for user
+app.get('/api/game-stats', authenticateToken, async (req, res) => {
+  console.log('Getting game stats for user:', req.user.id);
+  try {
+    const gameStats = await getGameStats(req.user.id);
+    console.log('Found game stats:', gameStats);
+    res.json(gameStats);
+  } catch (e) {
+    console.error('Game stats error:', e);
+    res.status(500).json({ error: 'Failed to get game stats' });
+  }
+});
+
+// Update game stats for user
+app.post('/api/game-stats', authenticateToken, async (req, res) => {
+  const { level, xp, hunger, carrots } = req.body;
+  console.log('Updating game stats for user:', req.user.id, 'New stats:', { level, xp, hunger, carrots });
+  if (level === undefined || xp === undefined || hunger === undefined || carrots === undefined) {
+    return res.status(400).json({ error: 'Missing game stats fields' });
+  }
+  try {
+    await updateGameStats(req.user.id, { level, xp, hunger, carrots });
+    console.log('Game stats updated successfully in database');
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Update game stats error:', e);
+    res.status(500).json({ error: 'Failed to update game stats' });
+  }
+});
+
 // Edit a class (name/location/start_time/end_time)
 app.put('/api/class/:id', authenticateToken, async (req, res) => {
   const classId = req.params.id;
@@ -86,21 +116,26 @@ app.delete('/api/class/:id', authenticateToken, async (req, res) => {
 // Save (replace) all classes for a user
 app.post('/api/classes', authenticateToken, async (req, res) => {
   const { classes } = req.body;
+  console.log('Saving classes for user:', req.user.id, 'Classes:', classes);
   if (!Array.isArray(classes)) return res.status(400).json({ error: 'Classes must be an array' });
   try {
     await saveClassesForUser(req.user.id, classes);
     res.json({ success: true });
   } catch (e) {
+    console.error('Failed to save classes:', e);
     res.status(500).json({ error: 'Failed to save classes' });
   }
 });
 
 // Get all classes for a user
 app.get('/api/classes', authenticateToken, async (req, res) => {
+  console.log('Getting classes for user:', req.user.id);
   try {
     const result = await getClassesByUserId(req.user.id);
+    console.log('Found classes:', result.rows);
     res.json(result.rows);
   } catch (e) {
+    console.error('Failed to fetch classes:', e);
     res.status(500).json({ error: 'Failed to fetch classes' });
   }
 });
@@ -108,16 +143,24 @@ app.get('/api/classes', authenticateToken, async (req, res) => {
 // Record attendance for a class
 app.post('/api/attendance', authenticateToken, async (req, res) => {
   const { class_id, reward } = req.body;
+  console.log('Recording attendance for user:', req.user.id, 'class:', class_id, 'reward:', reward);
   if (!class_id || reward === undefined) return res.status(400).json({ error: 'Missing class_id or reward' });
   try {
     // Check if user has already checked in within the last 23 hours
+    console.log('Checking recent attendance for user:', req.user.id, 'class:', class_id);
     const hasRecent = await hasRecentAttendance(req.user.id, class_id);
+    console.log('Has recent attendance:', hasRecent);
+    
     if (hasRecent) {
+      console.log('Blocking attendance due to 23-hour cooldown');
       return res.status(429).json({ error: 'Already checked in within the last 23 hours' });
     }
     
     // Record attendance in database
+    console.log('Attempting to record attendance in database...');
     const attendance = await recordAttendance(req.user.id, class_id, reward);
+    console.log('Recorded attendance:', attendance);
+    console.log('Sending success response...');
     res.json({ success: true, attendance });
   } catch (e) {
     console.error('Attendance error:', e);

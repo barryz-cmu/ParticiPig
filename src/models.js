@@ -1,3 +1,5 @@
+import pool from './db.js';
+
 // Get all classes for a user
 export async function getClassesByUserId(userId) {
   return pool.query('SELECT id, name, location, start_time, end_time FROM classes WHERE user_id = $1', [userId]);
@@ -39,7 +41,33 @@ export async function getTotalRewards(userId) {
   );
   return parseInt(result.rows[0].total_rewards);
 }
-import pool from './db.js';
+
+// Get game stats for a user
+export async function getGameStats(userId) {
+  let result = await pool.query(
+    'SELECT level, xp, hunger, carrots FROM game_stats WHERE user_id = $1',
+    [userId]
+  );
+  
+  // If no stats exist, create default stats
+  if (result.rows.length === 0) {
+    await pool.query(
+      'INSERT INTO game_stats (user_id, level, xp, hunger, carrots) VALUES ($1, 0, 0, 100, 0)',
+      [userId]
+    );
+    return { level: 0, xp: 0, hunger: 100, carrots: 0 };
+  }
+  
+  return result.rows[0];
+}
+
+// Update game stats for a user
+export async function updateGameStats(userId, { level, xp, hunger, carrots }) {
+  await pool.query(
+    'INSERT INTO game_stats (user_id, level, xp, hunger, carrots, updated_at) VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP) ON CONFLICT (user_id) DO UPDATE SET level = $2, xp = $3, hunger = $4, carrots = $5, updated_at = CURRENT_TIMESTAMP',
+    [userId, level, xp, Math.max(0, Math.min(100, hunger)), Math.max(0, carrots)]
+  );
+}
 
 export async function createTables() {
   await pool.query(`
@@ -70,6 +98,15 @@ export async function createTables() {
       class_id INTEGER REFERENCES classes(id) ON DELETE CASCADE,
       reward INTEGER,
       attended_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS game_stats (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+      level INTEGER DEFAULT 0,
+      xp INTEGER DEFAULT 0,
+      hunger INTEGER DEFAULT 100,
+      carrots INTEGER DEFAULT 0,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     CREATE TABLE IF NOT EXISTS battles (
       id SERIAL PRIMARY KEY,

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Piggy — Home</title>
+<style>
+  :root { --ink:#111; --muted:#6b7280; --line:#e5e7eb; --accent:#ef5da8; }
+  html,body{height:100%;margin:0;background:#fff;font-family:Inter,system-ui,Arial;color:var(--ink)}
+  .phone{width:420px;margin:16px auto;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#fff}
+  .pad{padding:14px}
+  .stats{display:grid;grid-template-columns: 80px 1fr; row-gap:8px;column-gap:10px;align-items:center}
+  .label{font-weight:800}
+  .value{font-variant-numeric:tabular-nums}
+  .bar{position:relative;height:12px;background:#f3f4f6;border-radius:6px;overflow:hidden}
+  .fill{position:absolute;inset:0;width:0;background:linear-gradient(90deg,#60a5fa,#34d399);transition:width .25s}
+  .hunger .fill{background:linear-gradient(90deg,#34d399,#f59e0b,#ef4444)}
+  .line{height:1px;background:var(--line);margin:8px 0}
+  canvas{display:block;width:100%;height:360px;image-rendering:pixelated;background:#fff}
+  .controls{display:flex;gap:8px;margin-top:8px}
+  button{flex:1;padding:10px 12px;border-radius:10px;border:1px solid #111;background:#fff;font-weight:700;cursor:pointer}
+  button.ghost{border-color:var(--line);color:#374151}
+  button.accent{border-color:var(--accent);color:var(--accent)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .tiny{font-size:12px;color:var(--muted)}
+  .bubble{position:absolute; padding:6px 8px; background:#fff; border:1px solid var(--line); border-radius:10px; font-weight:700; pointer-events:none; opacity:0; transform:translate(-50%,-100%) translateY(-10px); transition:opacity .15s, transform .15s}
+  .section{border-top:1px solid var(--line);padding:12px 14px}
+  .sched-row{display:flex;gap:8px;align-items:center;margin-top:8px}
+  input, select{border:1px solid var(--line);border-radius:10px;padding:8px 10px;font:inherit}
+  .pill{display:inline-block;padding:2px 8px;border:1px solid var(--line);border-radius:999px;font-size:12px;color:#374151;margin-right:6px}
+</style>
+</head>
+<body>
+<div class="phone">
+  <!-- STATS TOP (like your sketch) -->
+  <div class="pad">
+    <div class="stats">
+      <div class="label">Lvl</div>
+      <div>
+        <div class="bar"><div id="xpFill" class="fill"></div></div>
+        <div class="tiny"><span id="level">0</span> • <span id="xp">0</span>/100 xp</div>
+      </div>
+
+      <div class="label">Hunger</div>
+      <div class="bar hunger"><div id="hungerFill" class="fill" style="width:100%"></div></div>
+
+      <div class="label">Carrot</div>
+      <div class="value"><span id="carrots">0</span> 🥕</div>
+    </div>
+  </div>
+
+  <div class="line"></div>
+
+  <!-- PIG STAGE -->
+  <div class="pad" style="position:relative">
+    <canvas id="stage" width="420" height="360"></canvas>
+    <div id="bubble" class="bubble">oink oink!</div>
+    <div class="controls">
+      <button id="btn-talk" class="accent">Talk to Pig</button>
+      <button id="btn-mic"  class="ghost">Enable Mic</button>
+      <button id="btn-checkin" class="ghost" title="Check in when class time is active">Check In for Class</button>
+    </div>
+    <div class="tiny" id="next-class-note" style="margin-top:6px"></div>
+  </div>
+
+  <!-- SCHEDULE -->
+  <div class="section">
+    <div style="font-weight:800;margin-bottom:6px">Class Schedule</div>
+    <div id="sched-list" class="tiny"></div>
+    <div class="sched-row">
+      <input id="cls-name" placeholder="Class (e.g., Math 101)" style="flex:1">
+      <select id="cls-day">
+        <option value="1">Mon</option><option value="2">Tue</option><option value="3">Wed</option>
+        <option value="4">Thu</option><option value="5">Fri</option><option value="6">Sat</option><option value="0">Sun</option>
+      </select>
+      <input id="cls-time" type="time" value="09:00">
+      <button id="add-class" class="ghost" style="flex:0 0 auto">Add</button>
+    </div>
+  </div>
+
+  <!-- DIRECTIONS -->
+  <div class="section">
+    <div style="font-weight:800;margin-bottom:8px">How to Play</div>
+    <div class="tiny" style="line-height:1.45">
+      • On first login, add your <b>class schedule</b> above. <br>
+      • When it’s class time, tap <b>Check In for Class</b> (enabled within ~30 minutes of your class). Checking in
+        <span class="pill">+20 XP</span>
+        <span class="pill">+2 🥕</span>
+        <span class="pill">+15% Hunger</span>.<br>
+      • If you <b>skip class</b>, hunger slowly drops and your pig grows weak. <br>
+      • Train your pig by going to class; spend carrots to care for it. You’ll use your pig in
+        <b>speed racing</b>, <b>battling</b>, and more features coming soon!
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================== ASSETS ================== */
+const pigImg = new Image();
+pigImg.src = "pig.png"; // put your pig sprite here
+
+/* ================== STATE (PERSIST) ================== */
+const KEY = "piggy-home-v2";
+const initial = { level:0, xp:0, carrots:0, hunger:100, lastTick:Date.now(), schedule:[] };
+const XP_PER_LVL = 100;
+const HUNGER_DECAY_PER_HOUR = 8;  // % per hour
+const REWARD_XP = 20, REWARD_CARROT = 2, REWARD_HUNGER = 15;
+
+let S = load();
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY)) || {...initial}; }catch{ return {...initial}; } }
+function save(){ localStorage.setItem(KEY, JSON.stringify(S)); }
+
+/* ================== STATS UI ================== */
+const levelEl = document.getElementById('level');
+const xpEl = document.getElementById('xp');
+const xpFill = document.getElementById('xpFill');
+const carrotsEl = document.getElementById('carrots');
+const hungerFill = document.getElementById('hungerFill');
+
+function clamp01(v){ return Math.max(0, Math.min(1, v)); }
+function renderStats(){
+  levelEl.textContent = S.level;
+  xpEl.textContent = S.xp|0;
+  xpFill.style.width = `${clamp01(S.xp/XP_PER_LVL)*100}%`;
+  carrotsEl.textContent = S.carrots|0;
+  hungerFill.style.width = `${clamp01(S.hunger/100)*100}%`;
+}
+function addXP(n){
+  S.xp += n;
+  while (S.xp >= XP_PER_LVL){ S.xp -= XP_PER_LVL; S.level++; }
+  save(); renderStats();
+}
+function addCarrots(n){ S.carrots = Math.max(0, (S.carrots|0) + n); save(); renderStats(); }
+function addHunger(p){ S.hunger = Math.max(0, Math.min(100, S.hunger + p)); save(); renderStats(); }
+
+function hungerTick(){
+  const now = Date.now();
+  const hours = (now - S.lastTick) / (1000*60*60);
+  if (hours > 0){
+    S.hunger = Math.max(0, S.hunger - HUNGER_DECAY_PER_HOUR * hours);
+    S.lastTick = now;
+    save(); renderStats();
+  }
+}
+hungerTick(); renderStats();
+setInterval(hungerTick, 15000); // keep drifting down
+
+/* ================== CANVAS / PIG ================== */
+const canvas = document.getElementById('stage');
+const ctx = canvas.getContext('2d', { alpha:false });
+ctx.imageSmoothingEnabled = false;
+const pigSize = 150;
+const pigPos = { x: canvas.width*0.36, y: canvas.height*0.62 };
+
+const bubble = document.getElementById('bubble');
+let talkTimer = 0;
+
+function drawStage(t){
+  // bg
+  ctx.fillStyle = "#fff"; ctx.fillRect(0,0,canvas.width,canvas.height);
+  // floor oval
+  ctx.fillStyle = "#e5e7eb";
+  ctx.beginPath(); ctx.ellipse(pigPos.x, pigPos.y+30, 170, 18, 0, 0, Math.PI*2); ctx.fill();
+
+  // pig
+  const breathe = 1 + Math.sin(t*2)*0.02;
+  const wiggle = Math.max(0, Math.min(1, talkTimer/600));
+  const tilt = Math.sin(t*4)*0.08 + wiggle*0.18;
+  const bounce = Math.max(0, Math.sin(t*10))* (6*wiggle);
+
+  ctx.save();
+  ctx.translate(pigPos.x, pigPos.y - 30 - bounce);
+  ctx.rotate(tilt);
+  ctx.scale(1, breathe + wiggle*0.10);
+  ctx.translate(-pigSize/2, -pigSize/2);
+  if (pigImg.complete) ctx.drawImage(pigImg, 0, 0, pigSize, pigSize);
+  ctx.restore();
+
+  // talk bubble
+  if (talkTimer > 0){
+    bubble.style.opacity = 1;
+    bubble.style.transform = `translate(${pigPos.x}px, ${pigPos.y - 90}px) translate(-50%,-100%)`;
+  } else {
+    bubble.style.opacity = 0;
+  }
+}
+
+/* ================== AUDIO (OINK) ================== */
+let audioCtx;
+function ensureAudio(){ if (!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }
+function oink(){
+  ensureAudio();
+  const ctx = audioCtx;
+  const t = ctx.currentTime;
+
+  function syllable(start, dur, f0, f1){
+    const o = ctx.createOscillator(); o.type="square";
+    const g = ctx.createGain();
+    o.frequency.setValueAtTime(f0, start);
+    o.frequency.exponentialRampToValueAtTime(f1, start+dur*0.9);
+    g.gain.setValueAtTime(0.0001, start);
+    g.gain.linearRampToValueAtTime(0.22, start+0.03);
+    g.gain.exponentialRampToValueAtTime(0.0001, start+dur);
+    o.connect(g).connect(ctx.destination);
+    o.start(start); o.stop(start+dur+0.02);
+  }
+  syllable(t,      0.16, 240, 170);
+  syllable(t+0.18, 0.14, 220, 160);
+}
+
+/* ================== LOOP ================== */
+let t0 = performance.now();
+function frame(now){
+  const t = (now - t0)/1000;
+  drawStage(t);
+  if (talkTimer>0) talkTimer -= 16;
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ================== TALK / MIC ================== */
+const btnTalk = document.getElementById('btn-talk');
+const btnMic  = document.getElementById('btn-mic');
+btnTalk.addEventListener('click', () => { talkTimer = 900; oink(); });
+
+let rec=null, micOn=false;
+btnMic.addEventListener('click', () => {
+  if (micOn){ rec && rec.stop(); micOn=false; btnMic.textContent="Enable Mic"; return; }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR){ btnMic.textContent="Mic Unsupported"; btnMic.disabled=true; return; }
+  rec = new SR(); rec.lang="en-US"; rec.continuous=true; rec.interimResults=false;
+  rec.onresult = ()=>{ talkTimer=900; oink(); };
+  rec.onend = ()=>{ if (micOn) rec.start(); };
+  rec.start(); micOn=true; btnMic.textContent="Mic On (talk!)";
+});
+window.addEventListener('pointerdown', ensureAudio, { once:true });
+
+/* ================== SCHEDULE ================== */
+const listEl = document.getElementById('sched-list');
+const addBtn = document.getElementById('add-class');
+const nameEl = document.getElementById('cls-name');
+const dayEl  = document.getElementById('cls-day');
+const timeEl = document.getElementById('cls-time');
+const noteEl = document.getElementById('next-class-note');
+const checkBtn = document.getElementById('btn-checkin');
+
+function minutesOf(tstr){ const [h,m] = tstr.split(':').map(Number); return h*60+m; }
+function fmt(tmin){ const h=Math.floor(tmin/60), m=(tmin%60).toString().padStart(2,'0'); const A=h>=12?'PM':'AM'; const hh=((h+11)%12+1); return `${hh}:${m} ${A}`; }
+function dayName(i){ return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][i]; }
+
+function renderSched(){
+  if (!S.schedule.length){ listEl.innerHTML = '<div class="tiny">No classes yet. Add one!</div>'; }
+  else {
+    listEl.innerHTML = S.schedule.map((c,i)=>
+      `<div class="tiny" style="display:flex;justify-content:space-between;align-items:center;margin:4px 0">
+         <span><b>${c.name}</b> — ${dayName(c.day)} ${fmt(c.time)}</span>
+         <button data-i="${i}" class="ghost" style="padding:4px 8px;border-radius:8px">Remove</button>
+       </div>`
+    ).join('');
+    listEl.querySelectorAll('button[data-i]').forEach(b=>{
+      b.onclick=()=>{ S.schedule.splice(+b.dataset.i,1); save(); renderSched(); };
+    });
+  }
+  updateNextClassUI();
+}
+addBtn.addEventListener('click', ()=>{
+  const n = nameEl.value.trim()||'Class';
+  const d = +dayEl.value;
+  const t = minutesOf(timeEl.value);
+  S.schedule.push({ name:n, day:d, time:t });
+  save(); renderSched();
+});
+
+function minutesNow(){ const d=new Date(); return d.getHours()*60+d.getMinutes(); }
+function updateNextClassUI(){
+  const now = new Date();
+  const today = now.getDay();
+  const tmin = minutesNow();
+
+  // find today's next class or nearest within ±30 min window
+  let within = null;
+  let soon = null; // minutes until next class
+  S.schedule.forEach(c=>{
+    if (c.day === today){
+      const diff = c.time - tmin; // minutes from now
+      if (Math.abs(diff) <= 30) within = c;
+      if (diff >= 0) { if (soon === null || diff < soon) soon = diff; }
+    }
+  });
+
+  if (within){
+    noteEl.textContent = `Class "${within.name}" is happening now. You can Check In.`;
+    checkBtn.disabled = false;
+  } else {
+    checkBtn.disabled = true;
+    if (soon === null) noteEl.textContent = `No more classes today. Check back later or add one above.`;
+    else noteEl.textContent = `Next class in ~${soon} min.`;
+  }
+}
+setInterval(updateNextClassUI, 30*1000);
+renderSched();
+
+checkBtn.addEventListener('click', ()=>{
+  if (checkBtn.disabled) return;
+  addXP(REWARD_XP);
+  addCarrots(REWARD_CARROT);
+  addHunger(REWARD_HUNGER);
+  talkTimer = 700; oink();
+  updateNextClassUI();
+});
+</script>
+</body>
+</html>
