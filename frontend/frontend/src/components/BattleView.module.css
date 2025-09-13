@@ -1,0 +1,48 @@
+.battle {
+  background: #fff0f6;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 16px rgba(255,105,180,0.08);
+  max-width: 400px;
+  margin: 2rem auto;
+  text-align: center;
+}
+.pigs {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1.3rem;
+  margin-bottom: 1rem;
+}
+.vs {
+  font-weight: bold;
+  color: #ff69b4;
+}
+.animLeft {
+  animation: shake-left 1.2s;
+}
+.animRight {
+  animation: shake-right 1.2s;
+}
+@keyframes shake-left {
+  0% { transform: translateX(0); }
+  20% { transform: translateX(-10px); }
+  40% { transform: translateX(10px); }
+  60% { transform: translateX(-10px); }
+  80% { transform: translateX(10px); }
+  100% { transform: translateX(0); }
+}
+@keyframes shake-right {
+  0% { transform: translateX(0); }
+  20% { transform: translateX(10px); }
+  40% { transform: translateX(-10px); }
+  60% { transform: translateX(10px); }
+  80% { transform: translateX(-10px); }
+  100% { transform: translateX(0); }
+}
+.winner {
+  margin-top: 1rem;
+  color: #43a047;
+  font-weight: bold;
+  font-size: 1.1rem;
+}
