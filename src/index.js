@@ -1,5 +1,4 @@
-import { saveClassesForUser, getClassesByUserId } from './models.js';
-// ...existing code...
+import { saveClassesForUser, getClassesByUserId, recordAttendance, hasRecentAttendance, getTotalRewards } from './models.js';
 import express from 'express';
 import dotenv from 'dotenv';
 import { createTables } from './models.js';
@@ -49,6 +48,17 @@ app.get('/api/user', authenticateToken, async (req, res) => {
   res.json(user);
 });
 
+// Get total reward points for user
+app.get('/api/rewards', authenticateToken, async (req, res) => {
+  try {
+    const totalRewards = await getTotalRewards(req.user.id);
+    res.json({ totalRewards });
+  } catch (e) {
+    console.error('Rewards error:', e);
+    res.status(500).json({ error: 'Failed to get rewards' });
+  }
+});
+
 // Edit a class (name/location/start_time/end_time)
 app.put('/api/class/:id', authenticateToken, async (req, res) => {
   const classId = req.params.id;
@@ -92,6 +102,26 @@ app.get('/api/classes', authenticateToken, async (req, res) => {
     res.json(result.rows);
   } catch (e) {
     res.status(500).json({ error: 'Failed to fetch classes' });
+  }
+});
+
+// Record attendance for a class
+app.post('/api/attendance', authenticateToken, async (req, res) => {
+  const { class_id, reward } = req.body;
+  if (!class_id || reward === undefined) return res.status(400).json({ error: 'Missing class_id or reward' });
+  try {
+    // Check if user has already checked in within the last 23 hours
+    const hasRecent = await hasRecentAttendance(req.user.id, class_id);
+    if (hasRecent) {
+      return res.status(429).json({ error: 'Already checked in within the last 23 hours' });
+    }
+    
+    // Record attendance in database
+    const attendance = await recordAttendance(req.user.id, class_id, reward);
+    res.json({ success: true, attendance });
+  } catch (e) {
+    console.error('Attendance error:', e);
+    res.status(500).json({ error: 'Failed to record attendance' });
   }
 });
 

@@ -29,6 +29,22 @@ function App() {
     setPage('login');
   };
 
+  // Refresh user data (useful when returning from profile)
+  const refreshUserData = async () => {
+    const token = localStorage.getItem('token');
+    if (token && user) {
+      try {
+        const userData = await getUser(token);
+        setUser(userData);
+        const backendClasses = await getClasses(token);
+        setClasses(backendClasses);
+        console.log('User data refreshed');
+      } catch (error) {
+        console.error('Failed to refresh user data:', error);
+      }
+    }
+  };
+
   // Auto-login if token exists
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -47,7 +63,10 @@ function App() {
           try {
             const backendClasses = await getClasses(token);
             setClasses(backendClasses);
-          } catch {}
+          } catch (error) {
+            console.error('Failed to fetch classes:', error);
+            setClasses([]); // Set empty array on error
+          }
           setPage('dashboard');
         })
         .catch(() => {
@@ -89,7 +108,10 @@ function App() {
       try {
         const backendClasses = await getClasses(data.token);
         setClasses(backendClasses);
-      } catch {}
+      } catch (error) {
+        console.error('Failed to fetch classes after login:', error);
+        setClasses([]);
+      }
       setPage('dashboard');
     } catch (err) {
       setError(err.message || 'Authentication failed');
@@ -132,8 +154,15 @@ function App() {
             setShowProfilePrompt(false);
             // Save to backend
             if (token) {
-              try { await saveClasses(token, cls); } catch {}
+              try { 
+                await saveClasses(token, cls); 
+                console.log('Classes saved successfully');
+              } catch (error) {
+                console.error('Failed to save classes:', error);
+              }
             }
+            // Refresh user data before going back to dashboard
+            await refreshUserData();
             setPage('dashboard');
           }}
         />
@@ -144,6 +173,7 @@ function App() {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
       <button onClick={handleLogout} style={{ position: 'absolute', top: 16, right: 16, zIndex: 10 }}>Logout</button>
       <Dashboard
+        key={user?.id || 'no-user'} // Force re-render when user changes
         user={user}
         pig={pig}
         leaderboard={leaderboard}

@@ -18,7 +18,38 @@ export async function saveClasses(token, classes) {
   if (!res.ok) throw new Error('Failed to save classes');
   return await res.json();
 }
+
 const API_URL = 'http://localhost:3000/api';
+
+export async function recordAttendance(token, class_id, reward) {
+  const res = await fetch(`${API_URL}/attendance`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ class_id, reward })
+  });
+  
+  if (!res.ok) {
+    if (res.status === 429) {
+      // Cooldown error - throw with specific status info
+      const data = await res.json().catch(() => ({}));
+      throw new Error(`429: ${data.error || 'Already checked in within the last 23 hours'}`);
+    }
+    throw new Error('Failed to record attendance');
+  }
+  return await res.json();
+}
+
+export async function getTotalRewards(token) {
+  const res = await fetch(`${API_URL}/rewards`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error('Failed to fetch rewards');
+  const data = await res.json();
+  return data.totalRewards;
+}
 
 
 export async function signup(username, password) {
