@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import AuthForm from './components/AuthForm';
 import Dashboard from './components/Dashboard';
+import Shop from './components/Shop';
 import { signup as apiSignup, login as apiLogin, getUser, getClasses, saveClasses } from './api';
 import Profile from './components/Profile';
 
@@ -83,9 +84,12 @@ function App() {
       let data;
       if (page === 'signup') {
         data = await apiSignup(username, password);
+        // Store JWT token for new user
+        localStorage.setItem('token', data.token);
+        // Set user data from signup response
+        setUser(data.user);
         // After signup, prompt for classes/locations
         setShowProfilePrompt(true);
-        setUser({ username });
         setClasses([]);
         setPage('profile');
         return;
@@ -141,6 +145,17 @@ function App() {
       </div>
     );
   }
+  
+  if (page === 'shop' && user) {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: '#f9fafb' }}>
+        <Shop
+          user={user}
+          onNavigateBack={() => setPage('dashboard')}
+        />
+      </div>
+    );
+  }
 
   if (page === 'profile' && user) {
     const token = localStorage.getItem('token');
@@ -180,6 +195,7 @@ function App() {
         streak={streak}
         classes={classes}
         onUpdateSchedule={() => setPage('profile')}
+        onNavigateToShop={() => setPage('shop')}
       />
     </div>
   );

@@ -1,7 +1,211 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styles from './Dashboard.module.css';
-import { recordAttendance, getTotalRewards, getGameStats, updateGameStats } from '../api';
+import { recordAttendance, getTotalRewards, getGameStats, updateGameStats, getEquippedItems } from '../api';
 import pigImage from './pig.png';
+
+// Helper function for rounded rectangles
+const roundRect = (ctx, x, y, w, h, radius) => {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + w - radius, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
+  ctx.lineTo(x + w, y + h - radius);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
+  ctx.lineTo(x + radius, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+};
+
+// Drawing functions (shared with Shop)
+const drawTopHat = (ctx, x, y, scale = 1, locked = false) => {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  
+  // Apply grayscale if locked
+  if (locked) {
+    ctx.filter = 'grayscale(1) brightness(0.7)';
+  }
+  
+  // Hat body (dark gray/black)
+  ctx.fillStyle = locked ? '#555' : '#2d3748';
+  ctx.fillRect(-25, -45, 50, 35);
+  
+  // Hat brim (slightly lighter)
+  ctx.fillStyle = locked ? '#666' : '#4a5568';
+  ctx.fillRect(-35, -15, 70, 8);
+  
+  // Hat band (red accent)
+  ctx.fillStyle = locked ? '#777' : '#e53e3e';
+  ctx.fillRect(-25, -20, 50, 6);
+  
+  ctx.filter = 'none';
+  ctx.restore();
+};
+
+const drawTrafficCone = (ctx, x, y, scale, locked = false) => {
+  const s = 1.0 * scale;
+  ctx.save();
+  ctx.translate(x, y - 10);
+  
+  // Apply grayscale if locked
+  if (locked) {
+    ctx.filter = 'grayscale(1) brightness(0.7)';
+  }
+  
+  // Cone body
+  ctx.fillStyle = locked ? '#888' : '#fb923c';
+  ctx.beginPath();
+  ctx.moveTo(0, -44 * s);
+  ctx.bezierCurveTo(10 * s, -34 * s, 22 * s, -12 * s, 26 * s, 0);
+  ctx.lineTo(-26 * s, 0);
+  ctx.bezierCurveTo(-22 * s, -12 * s, -10 * s, -34 * s, 0, -44 * s);
+  ctx.closePath();
+  ctx.fill();
+  
+  // White stripe
+  ctx.fillStyle = locked ? '#bbb' : '#fff';
+  roundRect(ctx, -19 * s, -18 * s, 38 * s, 8 * s, 4 * s);
+  ctx.fill();
+  
+  // Orange base
+  ctx.fillStyle = locked ? '#666' : '#ea580c';
+  roundRect(ctx, -30 * s, 0, 60 * s, 7 * s, 4 * s);
+  ctx.fill();
+  
+  ctx.filter = 'none';
+  ctx.restore();
+};
+
+const drawAngelWings = (ctx, size, locked = false) => {
+  const stroke = Math.max(2, size * 0.02);
+  ctx.save();
+  ctx.translate(0, -size * 0.05);
+  // Helper function to draw one wing
+  const drawWing = (side = 1) => {
+    ctx.save();
+    ctx.scale(side, 1);
+    ctx.translate(-size * 0.44, -size * 0.10);
+    ctx.rotate(-0.12);
+    ctx.fillStyle = locked ? '#e5e7eb' : '#fff';
+    ctx.strokeStyle = locked ? '#d1d5db' : '#c7e0ff';
+    ctx.lineWidth = stroke;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(-size * 0.10, -size * 0.08, -size * 0.22, -size * 0.02);
+    ctx.quadraticCurveTo(-size * 0.26, size * 0.10, -size * 0.06, size * 0.14);
+    ctx.quadraticCurveTo(-size * 0.18, size * 0.06, 0, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    // Wing details
+    ctx.fillStyle = locked ? 'rgba(209,213,219,0.45)' : 'rgba(199,224,255,0.35)';
+    for (let i = 0; i < 3; i++) {
+      const f = i / 3;
+      ctx.beginPath();
+      ctx.ellipse(-size * (0.18 - f * 0.10), size * (0.02 + f * 0.06),
+                 size * (0.10 - f * 0.03), size * (0.05 - f * 0.015), -0.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  };
+  drawWing(1);  // Right wing
+  drawWing(-1); // Left wing
+  ctx.restore();
+};
+
+const drawHalo = (ctx, size, locked = false) => {
+  ctx.save();
+  ctx.translate(0, -size * 0.4);
+  
+  const glow = locked ? 'rgba(229,231,235,0.35)' : 'rgba(251,191,36,0.35)';
+  const ring = locked ? '#d1d5db' : '#fbbf24';
+  const inner = locked ? '#e5e7eb' : '#fde68a';
+  
+  // Glow effect
+  ctx.globalAlpha = 0.25;
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, size * 0.30, size * 0.11, 0, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // Main ring
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = ring;
+  ctx.lineWidth = size * 0.06;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, size * 0.26, size * 0.08, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  
+  // Inner ring
+  ctx.strokeStyle = inner;
+  ctx.lineWidth = size * 0.02;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, size * 0.22, size * 0.06, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  
+  ctx.restore();
+};
+
+const drawPigVariant = (ctx, x, y, size, pigId, cosmeticId, locked = false, basePigImage) => {
+  if (!basePigImage) return;
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  // Draw angel halo FIRST (so it appears behind the pig head)
+  if (pigId === 'angel') {
+    const scale = size / 150; // Assuming base pig image is ~150px
+    drawHalo(ctx, size / scale, locked);
+  }
+
+  // Draw angel wings BEFORE the pig (behind it)
+  if (pigId === 'angel') {
+    drawAngelWings(ctx, size, locked);
+  }
+
+  // Build filter string based on pig variant and locked state
+  let filter = 'none';
+  
+  // If pig is locked (not owned), show in grayscale
+  if (locked) {
+    filter = 'grayscale(1) brightness(0.7) contrast(1.2)';
+  } else {
+    // Apply pig variant filters only if unlocked
+    if (pigId === 'black') {
+      filter = 'brightness(0.38) saturate(0) contrast(1.05)';
+    } else if (pigId === 'angel') {
+      filter = 'brightness(1.10) saturate(1.08)';
+    } else if (pigId === 'roasted') {
+      filter = 'sepia(1) saturate(2.2) hue-rotate(-20deg) brightness(1.12) contrast(1.05)';
+    }
+  }
+
+  // Apply the filter and draw pig
+  ctx.filter = filter;
+  
+  // Draw pig based on variant
+  const scale = size / 150; // Assuming base pig image is ~150px
+  ctx.scale(scale, scale);
+
+  ctx.drawImage(basePigImage, -75, -75, 150, 150);
+
+  // Reset filter for cosmetics
+  ctx.filter = 'none';
+
+  // Always draw cosmetics, but gray them out if locked
+  if (cosmeticId) {
+    if (cosmeticId === 'top-hat') {
+      drawTopHat(ctx, 0, -40, 1.0, locked);
+    } else if (cosmeticId === 'traffic-cone') {
+      drawTrafficCone(ctx, 0, -30, 1.0, locked);
+    }
+  }
+
+  ctx.restore();
+};
 
 // Hardcoded CMU building coordinates (approximate)
 const BUILDING_COORDS = {
@@ -60,16 +264,20 @@ function isWithinClassTime(startTime) {
   return currentTime >= (startMinutes - 30) && currentTime <= (startMinutes + 30); // 2 hours window for testing
 }
 
-function Dashboard({ user, classes, onUpdateSchedule }) {
+function Dashboard({ user, classes, onUpdateSchedule, onNavigateToShop }) {
   // Game state
   const [level, setLevel] = useState(0);
   const [xp, setXp] = useState(0);
   const [hunger, setHunger] = useState(100);
   const [carrots, setCarrots] = useState(0);
   
+  // Equipped items state
+  const [equippedPig, setEquippedPig] = useState('pink');
+  const [equippedCosmetic, setEquippedCosmetic] = useState(null);
+  
   // UI state
   const [checkMsg, setCheckMsg] = useState('');
-  const [checking, setChecking] = useState(false);
+  const [checking, setChecking] = useState({});
   const [talkTimer, setTalkTimer] = useState(0);
   const [bubble, setBubble] = useState({ show: false, text: 'oink oink!' });
   
@@ -99,13 +307,26 @@ function Dashboard({ user, classes, onUpdateSchedule }) {
           const token = localStorage.getItem('token');
           console.log('Loading game stats for user:', user.id, 'token exists:', !!token);
           if (token) {
-            const stats = await getGameStats(token);
+            const [stats, equippedItems] = await Promise.all([
+              getGameStats(token),
+              getEquippedItems(token)
+            ]);
             console.log('Loaded game stats:', stats);
+            console.log('Loaded equipped items:', equippedItems);
+            
             console.log('Setting state - Level:', stats.level, 'XP:', stats.xp, 'Hunger:', stats.hunger, 'Carrots:', stats.carrots);
             setLevel(stats.level);
             setXp(stats.xp);
             setHunger(stats.hunger);
             setCarrots(stats.carrots);
+            
+            // Set equipped items
+            const pigItem = equippedItems.find(item => item.item_type === 'pig');
+            const cosmeticItem = equippedItems.find(item => item.item_type === 'cosmetic');
+            
+            console.log('Setting equipped pig:', pigItem?.item_id || 'pink', 'cosmetic:', cosmeticItem?.item_id || null);
+            setEquippedPig(pigItem ? pigItem.item_id : 'pink');
+            setEquippedCosmetic(cosmeticItem ? cosmeticItem.item_id : null);
           }
         } catch (error) {
           console.error('Failed to load game stats:', error);
@@ -119,6 +340,28 @@ function Dashboard({ user, classes, onUpdateSchedule }) {
         }
       };
       loadGameStats();
+      
+      // Also reload equipped items when window gains focus (user returns from shop)
+      const handleFocus = async () => {
+        console.log('Window focused, reloading equipped items...');
+        try {
+          const token = localStorage.getItem('token');
+          if (token) {
+            const equippedItems = await getEquippedItems(token);
+            const pigItem = equippedItems.find(item => item.item_type === 'pig');
+            const cosmeticItem = equippedItems.find(item => item.item_type === 'cosmetic');
+            
+            console.log('Reloaded equipped pig:', pigItem?.item_id || 'pink', 'cosmetic:', cosmeticItem?.item_id || null);
+            setEquippedPig(pigItem ? pigItem.item_id : 'pink');
+            setEquippedCosmetic(cosmeticItem ? cosmeticItem.item_id : null);
+          }
+        } catch (error) {
+          console.error('Failed to reload equipped items:', error);
+        }
+      };
+      
+      window.addEventListener('focus', handleFocus);
+      return () => window.removeEventListener('focus', handleFocus);
     }
   }, [user]);
 
@@ -190,8 +433,10 @@ function Dashboard({ user, classes, onUpdateSchedule }) {
         ctx.translate(pigPos.x, pigPos.y - 30 - bounce);
         ctx.rotate(tilt);
         ctx.scale(1, breathe + wiggle * 0.10);
-        ctx.translate(-pigSize / 2, -pigSize / 2);
-        ctx.drawImage(pigImgRef.current, 0, 0, pigSize, pigSize);
+        
+        // Use the shared drawPigVariant function for consistency with shop
+        drawPigVariant(ctx, 0, 0, pigSize, equippedPig, equippedCosmetic, false, pigImgRef.current);
+        
         ctx.restore();
       }
 
@@ -210,7 +455,7 @@ function Dashboard({ user, classes, onUpdateSchedule }) {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [talkTimer]);
+  }, [talkTimer, equippedPig, equippedCosmetic]); // Added equipped items to dependencies
 
   // Game functions
   const addXP = (amount) => {
@@ -280,6 +525,12 @@ function Dashboard({ user, classes, onUpdateSchedule }) {
 
   // Check-in handler
   const handleCheck = (classObj) => {
+    // Prevent duplicate clicks for this class
+    if (checking[classObj.id]) {
+      console.log('Already checking for this class, ignoring click');
+      return;
+    }
+    
     if (!navigator.geolocation) {
       setCheckMsg('Geolocation not supported.');
       return;
@@ -290,8 +541,8 @@ function Dashboard({ user, classes, onUpdateSchedule }) {
       return;
     }
     
-    setChecking(true);
-    setCheckMsg('Checking location...');
+  setChecking(prev => ({ ...prev, [classObj.id]: true }));
+  setCheckMsg('Checking location...');
     
     navigator.geolocation.getCurrentPosition(
       async pos => {
@@ -299,7 +550,7 @@ function Dashboard({ user, classes, onUpdateSchedule }) {
         const coords = BUILDING_COORDS[classObj.location];
         if (!coords) {
           setCheckMsg('No coordinates for this building.');
-          setChecking(false);
+          setChecking(prev => ({ ...prev, [classObj.id]: false }));
           return;
         }
         
@@ -315,10 +566,10 @@ function Dashboard({ user, classes, onUpdateSchedule }) {
             
             // Give game rewards
             addXP(20);
-            addCarrots(2);
+            addCarrots(100);
             addHunger(15); // Increase hunger when checking in
             
-            setCheckMsg(`Attendance success! +20 XP, +2 🥕, +15% Hunger`);
+            setCheckMsg(`Attendance success! +20 XP, +100 🥕, +15% Hunger`);
             setTalkTimer(700); // Make pig celebrate
           } catch (error) {
             console.error('Attendance error:', error);
@@ -331,9 +582,9 @@ function Dashboard({ user, classes, onUpdateSchedule }) {
         } else {
           setCheckMsg(`Too far from class location (${Math.round(dist)}m).`);
         }
-        setChecking(false);
+  setChecking(prev => ({ ...prev, [classObj.id]: false }));
       },
-      () => { setCheckMsg('Could not get location.'); setChecking(false); }
+  () => { setCheckMsg('Could not get location.'); setChecking(prev => ({ ...prev, [classObj.id]: false })); }
     );
   };
 
@@ -404,6 +655,12 @@ function Dashboard({ user, classes, onUpdateSchedule }) {
           >
             Talk to Pig
           </button>
+          <button 
+            onClick={onNavigateToShop}
+            className={styles.ghost}
+          >
+            Go to Shop
+          </button>
         </div>
 
         {checkMsg && (
@@ -441,7 +698,7 @@ function Dashboard({ user, classes, onUpdateSchedule }) {
                   </span>
                   <button
                     onClick={() => handleCheck(c)}
-                    disabled={!isWithinTime || checking}
+                    disabled={!isWithinTime || checking[c.id]}
                     className={isWithinTime ? styles.accent : styles.ghost}
                     style={{ 
                       fontSize: '12px', 
@@ -450,7 +707,7 @@ function Dashboard({ user, classes, onUpdateSchedule }) {
                       cursor: isWithinTime ? 'pointer' : 'not-allowed'
                     }}
                   >
-                    {checking ? 'Checking...' : (isWithinTime ? 'Check In' : 'Not Time')}
+                    {checking[c.id] ? 'Checking...' : (isWithinTime ? 'Check In' : 'Not Time')}
                   </button>
                 </div>
               );

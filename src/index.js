@@ -1,4 +1,4 @@
-import { saveClassesForUser, getClassesByUserId, recordAttendance, hasRecentAttendance, getTotalRewards, getGameStats, updateGameStats } from './models.js';
+import { saveClassesForUser, getClassesByUserId, recordAttendance, hasRecentAttendance, getTotalRewards, getGameStats, updateGameStats, getUserInventory, addInventoryItem, equipItem, getEquippedItems, initializeDefaultInventory } from './models.js';
 import express from 'express';
 import dotenv from 'dotenv';
 import { createTables } from './models.js';
@@ -165,6 +165,78 @@ app.post('/api/attendance', authenticateToken, async (req, res) => {
   } catch (e) {
     console.error('Attendance error:', e);
     res.status(500).json({ error: 'Failed to record attendance' });
+  }
+});
+
+// Get user inventory
+app.get('/api/inventory', authenticateToken, async (req, res) => {
+  try {
+    const inventory = await getUserInventory(req.user.id);
+    console.log('Found inventory for user:', req.user.id, inventory);
+    res.json(inventory);
+  } catch (e) {
+    console.error('Inventory error:', e);
+    res.status(500).json({ error: 'Failed to fetch inventory' });
+  }
+});
+
+// Purchase item
+app.post('/api/inventory/purchase', authenticateToken, async (req, res) => {
+  const { itemType, itemId, cost } = req.body;
+  console.log('Purchase request for user:', req.user.id, 'item:', itemType, itemId, 'cost:', cost);
+  
+  if (!itemType || !itemId || cost === undefined) {
+    return res.status(400).json({ error: 'Missing itemType, itemId, or cost' });
+  }
+  
+  try {
+    // Get current game stats to check carrots
+    const stats = await getGameStats(req.user.id);
+    if (stats.carrots < cost) {
+      return res.status(400).json({ error: 'Insufficient carrots' });
+    }
+    
+    // Deduct carrots and add item to inventory
+    const newCarrots = stats.carrots - cost;
+    await updateGameStats(req.user.id, { ...stats, carrots: newCarrots });
+    
+    const item = await addInventoryItem(req.user.id, itemType, itemId);
+    
+    // Auto-equip the new item
+    await equipItem(req.user.id, itemType, itemId);
+    
+    console.log('Item purchased and equipped:', item);
+    res.json({ success: true, item, remainingCarrots: newCarrots });
+  } catch (e) {
+    console.error('Purchase error:', e);
+    res.status(500).json({ error: 'Failed to purchase item' });
+  }
+});
+
+// Equip item
+app.post('/api/inventory/equip', authenticateToken, async (req, res) => {
+  const { itemType, itemId } = req.body;
+  console.log('Equip request for user:', req.user.id, 'item:', itemType, itemId);
+  
+  try {
+    const item = await equipItem(req.user.id, itemType, itemId);
+    console.log('Item equipped:', item);
+    res.json({ success: true, item });
+  } catch (e) {
+    console.error('Equip error:', e);
+    res.status(500).json({ error: 'Failed to equip item' });
+  }
+});
+
+// Get equipped items
+app.get('/api/inventory/equipped', authenticateToken, async (req, res) => {
+  try {
+    const equipped = await getEquippedItems(req.user.id);
+    console.log('Equipped items for user:', req.user.id, equipped);
+    res.json(equipped);
+  } catch (e) {
+    console.error('Equipped items error:', e);
+    res.status(500).json({ error: 'Failed to fetch equipped items' });
   }
 });
 

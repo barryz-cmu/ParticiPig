@@ -55,10 +55,62 @@ export async function getGameStats(userId) {
       'INSERT INTO game_stats (user_id, level, xp, hunger, carrots) VALUES ($1, 0, 0, 100, 0)',
       [userId]
     );
+    
+    // Initialize default inventory (pink pig)
+    await initializeDefaultInventory(userId);
+    
     return { level: 0, xp: 0, hunger: 100, carrots: 0 };
   }
   
   return result.rows[0];
+}
+
+// Inventory management functions
+export async function getUserInventory(userId) {
+  const result = await pool.query(
+    'SELECT item_type, item_id, equipped FROM inventory WHERE user_id = $1',
+    [userId]
+  );
+  return result.rows;
+}
+
+export async function addInventoryItem(userId, itemType, itemId) {
+  const result = await pool.query(
+    'INSERT INTO inventory (user_id, item_type, item_id) VALUES ($1, $2, $3) ON CONFLICT (user_id, item_type, item_id) DO NOTHING RETURNING *',
+    [userId, itemType, itemId]
+  );
+  return result.rows[0];
+}
+
+export async function equipItem(userId, itemType, itemId) {
+  // First unequip all items of this type for the user
+  await pool.query(
+    'UPDATE inventory SET equipped = FALSE WHERE user_id = $1 AND item_type = $2',
+    [userId, itemType]
+  );
+  
+  // Then equip the selected item
+  const result = await pool.query(
+    'UPDATE inventory SET equipped = TRUE WHERE user_id = $1 AND item_type = $2 AND item_id = $3 RETURNING *',
+    [userId, itemType, itemId]
+  );
+  
+  return result.rows[0];
+}
+
+export async function getEquippedItems(userId) {
+  const result = await pool.query(
+    'SELECT item_type, item_id FROM inventory WHERE user_id = $1 AND equipped = TRUE',
+    [userId]
+  );
+  return result.rows;
+}
+
+// Initialize default pig for new users
+export async function initializeDefaultInventory(userId) {
+  // Add pink pig as default
+  await addInventoryItem(userId, 'pig', 'pink');
+  await equipItem(userId, 'pig', 'pink');
 }
 
 // Update game stats for a user
@@ -107,6 +159,15 @@ export async function createTables() {
       hunger INTEGER DEFAULT 100,
       carrots INTEGER DEFAULT 0,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS inventory (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      item_type VARCHAR(50) NOT NULL, -- 'pig' or 'cosmetic'
+      item_id VARCHAR(50) NOT NULL,   -- 'pink', 'black', 'angel', 'roasted', 'top-hat', 'traffic-cone'
+      equipped BOOLEAN DEFAULT FALSE,
+      purchased_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, item_type, item_id)
     );
     CREATE TABLE IF NOT EXISTS battles (
       id SERIAL PRIMARY KEY,

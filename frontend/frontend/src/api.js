@@ -1,3 +1,5 @@
+const API_URL = 'http://localhost:3000/api';
+
 export async function getClasses(token) {
   const res = await fetch(`${API_URL}/classes`, {
     headers: { 'Authorization': `Bearer ${token}` }
@@ -19,7 +21,61 @@ export async function saveClasses(token, classes) {
   return await res.json();
 }
 
-const API_URL = 'http://localhost:3000/api';
+export async function getUserDetails(token) {
+  const res = await fetch(`${API_URL}/user`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error('Failed to fetch user details');
+  return await res.json();
+}
+
+// Inventory API functions
+export async function getUserInventory(token) {
+  const res = await fetch(`${API_URL}/inventory`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error('Failed to fetch inventory');
+  return await res.json();
+}
+
+export async function purchaseItem(token, itemType, itemId, cost) {
+  const res = await fetch(`${API_URL}/inventory/purchase`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ itemType, itemId, cost })
+  });
+  
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.error || 'Failed to purchase item');
+  }
+  return await res.json();
+}
+
+export async function equipItemAPI(token, itemType, itemId) {
+  const res = await fetch(`${API_URL}/inventory/equip`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    },
+    body: JSON.stringify({ itemType, itemId })
+  });
+  
+  if (!res.ok) throw new Error('Failed to equip item');
+  return await res.json();
+}
+
+export async function getEquippedItems(token) {
+  const res = await fetch(`${API_URL}/inventory/equipped`, {
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error('Failed to fetch equipped items');
+  return await res.json();
+}
 
 export async function recordAttendance(token, class_id, reward) {
   try {
@@ -104,7 +160,6 @@ export async function updateGameStats(token, { level, xp, hunger, carrots }) {
   return await res.json();
 }
 
-
 export async function signup(username, password) {
   const res = await fetch(`${API_URL}/signup`, {
     method: 'POST',
@@ -117,14 +172,13 @@ export async function signup(username, password) {
     try {
       const data = await res.json();
       errMsg = data.error || errMsg;
-    } catch (e) {
+    } catch {
       // Ignore JSON parsing errors
     }
     throw new Error(errMsg);
   }
   return await res.json();
 }
-
 
 export async function login(username, password) {
   const res = await fetch(`${API_URL}/login`, {
@@ -137,7 +191,7 @@ export async function login(username, password) {
     try {
       const data = await res.json();
       errMsg = data.error || errMsg;
-    } catch (e) {
+    } catch {
       // Ignore JSON parsing errors
     }
     throw new Error(errMsg);
